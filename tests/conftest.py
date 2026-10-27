@@ -23,3 +23,27 @@ def tmp_repo(tmp_path: Path) -> Path:
     git(repo, "add", "app.py")
     git(repo, "commit", "-q", "-m", "initial")
     return repo
+
+
+def load_seed_module():
+    import importlib.util
+
+    path = Path(__file__).resolve().parents[1] / "demo" / "seed_demo_repo.py"
+    spec = importlib.util.spec_from_file_location("seed_demo_repo", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.fixture(scope="session")
+def demo(tmp_path_factory: pytest.TempPathFactory) -> dict[str, str]:
+    """The seeded fence-demo repo, with C3 listed in .git-blame-ignore-revs."""
+    out = tmp_path_factory.mktemp("demo")
+    return {**load_seed_module().seed(out), "out": str(out)}
+
+
+@pytest.fixture(scope="session")
+def demo_no_ignore(tmp_path_factory: pytest.TempPathFactory) -> dict[str, str]:
+    """Same history, but the formatter commit is NOT listed in .git-blame-ignore-revs."""
+    out = tmp_path_factory.mktemp("demo_no_ignore")
+    return {**load_seed_module().seed(out, ignore_revs=False), "out": str(out)}

@@ -1,13 +1,11 @@
-import importlib.util
 import json
 from pathlib import Path
 
 import pytest
 
-SEED_PATH = Path(__file__).resolve().parents[1] / "demo" / "seed_demo_repo.py"
-_spec = importlib.util.spec_from_file_location("seed_demo_repo", SEED_PATH)
-seed_mod = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(seed_mod)
+from tests.conftest import load_seed_module
+
+seed_mod = load_seed_module()
 
 
 def test_cleanup_diff_removes_the_sleep_and_import(tmp_path: Path) -> None:
