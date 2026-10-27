@@ -1,0 +1,42 @@
+[project]
+name = "fence"
+version = "0.1.0"
+description = "Records why code exists and warns before it is removed."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "typer>=0.12",
+    "unidiff>=0.7.5",
+    "pydantic>=2.6",
+]
+
+[project.scripts]
+fence = "fence.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fence"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+ignore = ["S603", "S607"]  # we call git via list-form subprocess on purpose; see fence/git/runner.py
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "S108"]
+"demo/**" = ["S101"]
