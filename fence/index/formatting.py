@@ -29,19 +29,25 @@ def is_candidate(entry: LogEntry) -> bool:
     return worded or all(c.added == c.deleted for c in entry.changes)
 
 
-def detect_format_only(repo: Repo, entry: LogEntry) -> bool:
-    if not is_candidate(entry):
-        return False
-    parent = entry.parents[0]
-    specs = [(sha, c.path) for c in entry.changes for sha in (parent, entry.sha)]
+def detect_format_only(repo: Repo, entries: list[LogEntry]) -> set[str]:
+    """SHAs of formatting-only commits among `entries`. Two git processes per call."""
+    cands = [e for e in entries if is_candidate(e)]
+    if not cands:
+        return set()
+    specs = [(sha, c.path) for e in cands for c in e.changes for sha in (e.parents[0], e.sha)]
     try:
         blobs = repo.read_blobs(specs)
     except GitError:
-        return False
-    for c in entry.changes:
-        old, new = blobs.get((parent, c.path)), blobs.get((entry.sha, c.path))
-        if old is None or new is None or old == new:
-            return False
-        if tokens_for(c.path, old) != tokens_for(c.path, new):
-            return False
-    return True
+        return set()
+    out = set()
+    for e in cands:
+        parent = e.parents[0]
+        for c in e.changes:
+            old, new = blobs.get((parent, c.path)), blobs.get((e.sha, c.path))
+            if old is None or new is None or old == new:
+                break
+            if tokens_for(c.path, old) != tokens_for(c.path, new):
+                break
+        else:
+            out.add(e.sha)
+    return out

@@ -27,7 +27,7 @@ _MERGE_PR = re.compile(r"^Merge pull request #(\d+) from ")
 _SQUASH_PR = re.compile(r"\(#(\d+)\)\s*$")
 _REVERT = re.compile(r"This reverts commit ([0-9a-f]{40})")
 
-FormatDetector = Callable[[Repo, LogEntry], bool]
+FormatDetector = Callable[[Repo, list[LogEntry]], set[str]]  # -> format-only SHAs
 Progress = Callable[[int], None]
 
 
@@ -176,6 +176,7 @@ def _write_batch(
     changes: list[FileChange] = []
     signals: list[tuple[str, str, str]] = []
     reverts: list[tuple[str, str]] = []
+    fmt_shas = detect_format(repo, batch) if detect_format else set()
     for e in batch:
         pr, pr_source = pr_from_subject(e.subject)
         kept = [
@@ -183,7 +184,7 @@ def _write_batch(
             if included(c.path, cfg.index.include, cfg.index.exclude)
             or (c.old_path and included(c.old_path, cfg.index.include, cfg.index.exclude))
         ]
-        format_only = bool(detect_format and kept and detect_format(repo, e))
+        format_only = bool(kept) and e.sha in fmt_shas
         rows.append(
             CommitRow(
                 sha=e.sha, parents=e.parents, author_name=e.author_name,
