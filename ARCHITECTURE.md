@@ -22,7 +22,7 @@ So the wedge is narrower than the brief says, but it holds. Fence checks a diff 
   - typer: CLI.
   - pydantic: config validation and versioned JSON schemas.
   - unidiff: diff parsing.
-  - tree-sitter plus one grammar wheel each for Python, JavaScript, TypeScript/TSX, Go and Java. The wheels are prebuilt, so no compiler is needed.
+  - tree-sitter plus one grammar wheel each for JavaScript, TypeScript/TSX, Go and Java (prebuilt, no compiler). Python uses the stdlib `ast`/`tokenize`.
 - **The standard library covers the rest:** sqlite3, tomllib, urllib (GitHub), json, hashlib, concurrent.futures.
 - **No MCP SDK.** Its dependency tree (web server, async stack, HTTP client) is heavier than the protocol Fence needs: JSON-RPC 2.0 over stdio with `initialize`, `tools/list` and `tools/call`. A hand-written server of about 300 lines is tested against the protocol directly.
 - **No LLM in the core.** The optional synthesis pass (P2) sits behind an interface, is off by default, and has a cost cap.
@@ -31,7 +31,7 @@ So the wedge is narrower than the brief says, but it holds. Fence checks a diff 
 
 ```
 git/        runner.py (the ONLY subprocess caller), blame, log, stream (bounded log streaming)
-lang/       plugin registry; one tree-sitter plugin per language: symbols, normalized tokens
+lang/       plugin registry: stdlib plugin for Python, tree-sitter plugins for JS/TS/Go/Java: symbols, normalized tokens
 anchors/    Anchor model, fingerprint (normalized-token hash + 5-token shingles), re-find
 index/      SQLite store, migrations, incremental indexer, rename graph, PR mapping
 github/     REST client (ETag cache, rate limits, pagination, resumable cursor), offline report
@@ -88,8 +88,8 @@ cli.py      typer entry points; stable exit codes
 ## Scoring
 
 - **Fence Strength** is a sum of named factors. Each factor returns `(id, points, plain-English sentence)`. The total is clamped to 0-100 and rounded.
-- Weights live in `scoring/defaults.toml`, can be overridden in `fence.toml`, and are tuned with the backtest.
-- **Change Risk** = Strength × a change-kind multiplier (delete 1.0 > loosen 0.85 > alter 0.6 > move 0.3), plus bonuses for removed tests and for touching tests linked to the evidence.
+- Weights live in `WEIGHTS` in `fence/scoring/strength.py`, can be overridden under `[scoring.weights]` in `fence.toml`, and are tuned with the backtest (DECISIONS.md).
+- **Change Risk** = Strength × a change-kind multiplier (delete 1.0 > loosen 0.85 > alter 0.5 > move 0.3), plus bonuses for removed tests and sensitive paths. VERIFY needs risk >= 25 for stated grades A/B and >= 50 for inferred C/D.
 - **Confidence** comes from grade, evidence coverage (offline mode or shallow clone lowers it) and the number of corroborating signals, then is calibrated against backtest outcomes.
 - The same inputs always produce the same output: ordering is stable everywhere.
 - `fence explain` prints every factor.

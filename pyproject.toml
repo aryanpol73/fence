@@ -3,6 +3,7 @@ name = "fence"
 version = "0.1.0"
 description = "Records why code exists and warns before it is removed."
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "typer>=0.12",
