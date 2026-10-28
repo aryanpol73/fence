@@ -39,16 +39,24 @@ def test_safe_relpath_rejects_traversal(tmp_repo: Path, path: str) -> None:
         Repo.open(tmp_repo).safe_relpath(path)
 
 
+def _symlink(target: Path, link: Path) -> None:
+    # Windows needs Developer Mode or admin rights to create symlinks.
+    try:
+        os.symlink(target, link)
+    except OSError as e:
+        pytest.skip(f"symlinks unavailable here: {e}")
+
+
 def test_safe_relpath_rejects_symlink_escape(tmp_repo: Path, tmp_path: Path) -> None:
     secret = tmp_path / "secret.txt"
     secret.write_text("x")
-    os.symlink(secret, tmp_repo / "link.py")
+    _symlink(secret, tmp_repo / "link.py")
     with pytest.raises(UnsafeInput):
         Repo.open(tmp_repo).safe_relpath("link.py")
 
 
 def test_safe_relpath_allows_symlink_inside_repo(tmp_repo: Path) -> None:
-    os.symlink(tmp_repo / "app.py", tmp_repo / "alias.py")
+    _symlink(tmp_repo / "app.py", tmp_repo / "alias.py")
     assert Repo.open(tmp_repo).safe_relpath("alias.py") == "app.py"
 
 
