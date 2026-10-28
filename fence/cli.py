@@ -328,3 +328,47 @@ def config_cmd(repo: RepoOpt = Path("."), json_out: JsonOpt = False) -> None:
         typer.echo(f"\n[{section}]")
         for k, v in values.items():
             typer.echo(f"{k} = {dumps(v) if not isinstance(v, str) else repr(v)}")
+
+
+@app.command("mcp")
+def mcp_cmd(repo: RepoOpt = Path(".")) -> None:
+    """Run the MCP server on stdio (for Claude Code and other agents)."""
+    from fence.mcp.server import serve
+
+    serve(str(repo))
+
+
+@app.command("scan")
+def scan_cmd(
+    path: Annotated[str, typer.Argument(help="Directory (default: repo root).")] = ".",
+    limit: Annotated[int, typer.Option(help="Max decisions to show.")] = 20,
+    repo: RepoOpt = Path("."), json_out: JsonOpt = False, no_color: NoColorOpt = False,
+) -> None:
+    """List everything in a directory you should NOT simply delete, strongest first."""
+    from fence.scan import scan
+
+    ctx = _open(repo)
+    _ensure_indexed(ctx, json_out)
+    try:
+        res = scan(ctx, path)
+    except GitError as e:
+        raise _fail(str(e)) from None
+    if json_out:
+        typer.echo(dumps({"schema": "fence/v1", "kind": "scan", "path": res.path,
+                          "files_scanned": res.files_scanned, "notes": res.notes,
+                          "decisions": [{"file": f, **d.to_dict()} for f, d in
+                                        res.decisions[:limit]]}))
+        return
+    o = _out(ctx, no_color, False)
+    typer.echo(f"{res.path}: {len(res.decisions)} decisions in {res.files_scanned} files")
+    for f, d in res.decisions[:limit]:
+        s = d.strength
+        lines = ",".join(f"{a.start_line}-{a.end_line}" for a in d.anchors[:3])
+        typer.echo(f"{o.c(f'[{s.band.upper()} {s.value}]', s.band)} {f}:{lines} | {d.type} | "
+                   f"grade {d.grade} | {d.reason_text[:100]}")
+    for n in res.notes:
+        typer.echo(f"Note: {n}")
+
+
+if __name__ == "__main__":
+    app()
