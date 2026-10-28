@@ -243,9 +243,11 @@ def _verdict(cfg: Config, d: DecisionRecord, risk: Score, fail_on: str,
     )
     if can_block and BANDS.index(risk.band) >= BANDS.index(fail_on):
         return KEEP
-    # Stated reasons (A/B) are rare and precise; inferred ones (C/D) are noisy, so they
-    # need more risk before they interrupt anyone.
-    floor = cfg.scoring.bands.medium if d.grade in ("A", "B") else cfg.scoring.verify_min_risk
+    # VERIFY needs scoring.verify_min_risk, except a stated reason (A/B) of a high-stakes
+    # type, which warns from the medium band. Backtest: other A/B warnings below 50 were
+    # 60 false alarms for 2 regrets (DECISIONS.md).
+    stated_high = d.grade in ("A", "B") and d.type in cfg.scoring.high_stakes_types
+    floor = cfg.scoring.bands.medium if stated_high else cfg.scoring.verify_min_risk
     if risk.value >= floor and cls.kind != "move":
         return VERIFY
     return CLEAR
