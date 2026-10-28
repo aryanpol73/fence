@@ -41,16 +41,26 @@ What is done, partial, or not done, each with the reason. Kept accurate to the c
 
 ## Partial
 
-- **Calibration.** Confidence reflects the evidence grade and coverage. It is not calibrated
-  against outcomes: in the backtest, warned blocks at higher confidence were *not* regretted
-  more often. Two reasons: the regret base rate is about 3%, and regret is a weak proxy for
-  "the reason was right". It needs a labelled set of correct-reason judgments.
-- **Backtest accuracy.** Warnings beat the base rate only modestly (about 1.2-1.4x), with small
-  samples of regretted removals. The noise budget is met on requests but not on cobra or
-  express (10-12% of commits warned). See the README for the numbers.
-- **`check` latency** is about 1-1.5s median and 3-5.3s p90 per commit on Windows (before memoization). It goes
-  over the 2-3s target on larger diffs, because line-history walks run once per decision.
-  Hook mode skips them.
+- **Calibration (target missed on held-out data).** Change Risk now carries an outcome
+  calibration: the observed regret rate for its risk bin, from a static isotonic table fitted
+  on cobra + requests (`fence/scoring/calibration.json`). On those repos the rate is
+  monotonic: 2.0% / 3.3% / 8.8% for risk 0-29 / 30-50 / 51-100. On held-out express it is
+  flat (1.7% / 1.9% / 1.9%), so it is not monotonic there.
+  - Why it falls short: 27 regrets on the fitting set and 10 on express are too few to
+    estimate rates that transfer between repos.
+  - Evidence confidence (grade and coverage) is shown separately, labelled as such, and is
+    not an outcome probability.
+- **Backtest precision (2x target missed).** At 500 commits:
+  - cobra: 2.85x lift, 43% recall.
+  - requests: 1.6x lift, 25% recall.
+  - held-out express: 0.96x lift, 20% recall.
+  The tuning-set gains did not generalize. Per the overfitting guard, no further tuning was
+  done against express.
+- **Noise (5% target missed on two of three).** cobra warns on 6.2% of commits (was 12%),
+  requests on 1.6% (was 2.2%), express on 7.4% (was 9.8%).
+- **`check` latency** is 0.7-0.9s median and 2.0-2.8s p90 per commit on Windows (500-commit
+  backtests). It can go over the 2-3s target on larger diffs, because line-history walks
+  run once per decision. Hook mode skips them.
 - **Blast radius** (caller counts) is used only for obsolescence, not as a Strength factor.
   Counting callers cheaply and correctly across languages needs a references index.
 - **D4 regression echo.** Re-fixes of the same lines raise Strength (the regression-chain

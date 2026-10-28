@@ -4,6 +4,17 @@ All notable changes to Fence. Versions follow semantic versioning.
 
 ## 0.1.0 (unreleased)
 
+### Precision and calibration round
+
+- VERIFY now needs risk >= 50, except stated (A/B) decisions of high-stakes types (`scoring.high_stakes_types`).
+- Low-signal paths (docs, config, completion scripts) count half (`scoring.low_signal_paths`).
+- Keyword-inferred decision types (grade C/D) count half.
+- Change Risk carries `regret_rate` and `regret_n` from a shipped isotonic calibration table. `python -m fence.scoring.calibration` refits it.
+- The backtest reports observed rates per calibration bin, plus `calibration_monotonic`.
+- Measured: noise is down on all three benchmark repos. Precision improved on the tuning set but not on held-out express. See README and STATUS.
+
+### Initial features
+
 First usable release.
 
 - Incremental, crash-safe history index (SQLite), with rewrite and orphan detection, format-only commit detection, and PR mapping from merge and squash subjects.

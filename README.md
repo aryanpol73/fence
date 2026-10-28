@@ -99,7 +99,7 @@ and "what would change this verdict". `fence explain FILE:LINE` prints all of it
 | Verdict | When |
 |---|---|
 | KEEP | Risk ≥ `policy.fail_on_band` (default high) for an active decision graded A-C. Fails the run. |
-| VERIFY | Risk ≥ 25 with a stated reason (A/B), or ≥ 50 with an inferred one (C/D). Informs. |
+| VERIFY | Risk ≥ 50 (`scoring.verify_min_risk`); or ≥ 25 for a stated reason (A/B) of a high-stakes type (incident, security, data-integrity, concurrency). Docs/config/completion paths count half. Informs. |
 | SAFE-TO-REMOVE-CANDIDATE | Reason known, plus concrete evidence that it is obsolete: a dependency removed or upgraded, a flag gone, or no callers left. |
 | CLEAR | Nothing meaningful affected. |
 
@@ -221,32 +221,42 @@ which a regret can appear.
 - A block is **warned** if Fence says KEEP or VERIFY, using only history up to the commit's
   parent.
 
-Local-git mode, no GitHub token, Windows 11, run 2026-10-28.
+Local-git mode, no GitHub token, Windows 11, run 2026-10-28/29. Thresholds were tuned on
+cobra and requests only; express is **held out** and was not used for tuning.
 
-| Repo (HEAD) | Lang | Removal blocks | Regretted (base rate) | Warned | Precision (warn) | Recall (warn) | Precision / recall (KEEP only) | Commits warned per 1k | Median / p90 check |
-|---|---|---|---|---|---|---|---|---|---|
-| spf13/cobra (`adbc881`) | Go | 720 | 23 (3.2%) | 263 | 4.6% | 52% | 2.0% / 4% | 120 | 1.08s / 3.09s |
-| psf/requests (`3c7baaa0`) | Python | 114 | 4 (3.5%) | 23 | 4.3% | 25% | 9.1% / 25% | 22 | 1.44s / 4.45s |
-| expressjs/express (`1c6f1b0f`) | JS | 564 | 10 (1.8%) | 161 | 2.5% | 40% | 2.2% / 10% | 98 | 1.47s / 5.31s |
+| Repo (HEAD) | Role | Removal blocks | Regretted (base rate) | Warned | Precision (lift) | Recall | Commits warned | Median / p90 check |
+|---|---|---|---|---|---|---|---|---|
+| spf13/cobra (`adbc881`) | tuning | 720 | 23 (3.2%) | 110 | 9.1% (2.85x) | 43% | 6.2% | 0.70s / 2.02s |
+| psf/requests (`3c7baaa0`) | tuning | 114 | 4 (3.5%) | 18 | 5.6% (1.6x) | 25% | 1.6% | 0.81s / 2.72s |
+| expressjs/express (`1c6f1b0f`) | held out | 564 | 10 (1.8%) | 121 | 1.7% (0.96x) | 20% | 7.4% | 0.86s / 2.84s |
 
-Reading these honestly:
-- Warnings beat the base rate only modestly (1.2-1.4x), and the regret samples are small
-  (4-23 per repo).
-- Regret labels are a lower bound on "risky removal", but they are also noisy: most
-  regretted removals in these repos are mundane (completion scripts, docs config), not
-  guards from incidents.
-- Noise met the budget on requests (2.2% of commits warned) but not on cobra (12%) or
-  express (10%).
-- Confidence values do **not** track regret rates (calibration tables are in the JSON
-  output). See STATUS.md.
-- These latencies were measured before SHA memoization, which halved `check` time on a
-  10-file diff (4.1s to 2.0s).
-- History: before noise tuning (see DECISIONS.md), cobra warned on 37% of commits.
+Before this tuning round, the same runs gave:
+- cobra: 1.4x lift, 52% recall, 12% of commits warned;
+- requests: 1.2x lift, 25% recall, 2.2% of commits warned;
+- express: 1.4x lift, 40% recall, 9.8% of commits warned.
+
+Targets were at most 5% of commits warned, at least 2x lift at about 25% recall, and
+monotonic calibration. Against them:
+- **Noise:** better on all three repos, held-out express included. The budget is met only on
+  requests; cobra is at 6.2% and express at 7.4%.
+- **Precision:** improved on the tuning set but **did not generalize**. Express is at the
+  base rate. With 4-23 regrets per repo, differences of a few regrets decide these
+  percentages.
+- **Calibration:** the shipped table (`fence/scoring/calibration.json`, isotonic fit on cobra
+  and requests) is monotonic there: 2.0% / 3.3% / 8.8% for risk 0-29 / 30-50 / 51-100. On
+  express the observed rates are flat (1.7% / 1.9% / 1.9%), so it is **not** monotonic on
+  held-out data.
 
 Reproduce:
 
 ```bash
 fence backtest -C path/to/repo --max-commits 500 --window 300 --json --dump outcomes.jsonl
+```
+
+Refit the calibration table:
+
+```bash
+python -m fence.scoring.calibration fence/scoring/calibration.json a.jsonl b.jsonl
 ```
 
 Warm `fence why` on requests takes about 0.4s.

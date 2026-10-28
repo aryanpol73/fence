@@ -15,3 +15,10 @@ Append-only. One line per change to a default from the brief or CLAUDE.md, with 
   - (3) Grade D does relatively well (122 warned, 9 regretted). Its risk comes from history-shape factors (survival, people, re-fixes), not from inferred text.
   - (4) Losing a guard signal barely helps (5.8% vs 4.0% regretted), too weak to require for VERIFY.
   - (5) Nearly all warnings are deletes (275 of 286). Evidence confidence is not monotonic in regret rate, so it cannot serve as outcome confidence.
+- 2026-10-29: Precision and noise changes, tuned on cobra + requests only:
+  - Change Risk on `scoring.low_signal_paths` (docs, config, completion scripts) is scaled by 0.5.
+  - Decision types inferred from keywords (grade C/D) count 0.5x.
+  - VERIFY needs risk >= 50 for every grade, except a stated (A/B) decision of a type in `scoring.high_stakes_types`, which keeps the medium band.
+  - Results at 500 commits: cobra 2.85x lift / 43% recall / 6.2% of commits warned; requests 1.6x / 25% / 1.6%. Held-out express: 0.96x / 20% / 7.4% (before: 1.4x / 40% / 9.8%).
+  - Kept because noise fell on all three repos, held-out included. The precision change on express rests on 2 regrets. Targets missed and not tuned further against express.
+- 2026-10-29: Outcome calibration ships as a static isotonic table, fitted on cobra + requests (834 blocks, 27 regrets; at least 30 blocks and 2 regrets per bin). It is monotonic on the fitting set and flat on express. This is reported, not hidden: the table's rates describe the fitting repos only.
