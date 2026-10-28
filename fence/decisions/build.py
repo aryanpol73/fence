@@ -8,6 +8,7 @@ the current line ranges that commit still owns.
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from dataclasses import dataclass, field
 
@@ -21,7 +22,13 @@ from fence.globs import match_any
 from fence.index.store import CommitRow
 from fence.lang import enclosing_symbol, plugin_for
 from fence.scoring.strength import StrengthInputs, strength
-from fence.signals.catalog import DECISION_TYPES, TEXT_SIGNALS, extract_text
+from fence.signals.catalog import (
+    DECISION_TYPES,
+    LABEL_SIGNALS,
+    TEXT_SIGNALS,
+    extract_labels,
+    extract_text,
+)
 from fence.signals.code import CODE_SIGNALS, match_code
 from fence.text import clean
 
@@ -33,7 +40,7 @@ VENDORED = ("vendor/**", "third_party/**", "node_modules/**", "**/generated/**",
             "**/*_pb2.py", "**/*.min.js")
 LINK_SIGNALS = {"text.closes_issue", "text.issue_ref", "text.ticket", "text.incident_url"}
 FIX_SIGNALS = {"text.fix", "text.regression", "text.hotfix"}
-_TEXT_TYPE = {s.id: s.decision_type for s in TEXT_SIGNALS}
+_TEXT_TYPE = {s.id: s.decision_type for s in TEXT_SIGNALS + LABEL_SIGNALS}
 _CODE_WEIGHT = {s.id: s.weight for s in CODE_SIGNALS}
 _CODE_TYPE = {s.id: s.decision_type for s in CODE_SIGNALS}
 MAX_LATER = 20
@@ -164,6 +171,7 @@ def _record(
     first = bls[0]
     message = row.message if row else first.summary
     ev: list[Evidence] = []
+    authors = {first.author}
 
     def add(**kw) -> Evidence:
         e = Evidence(id=f"E{len(ev) + 1}", **kw)
@@ -192,11 +200,16 @@ def _record(
         pr = _find_merge_pr(ctx, sha, target.rev)
     if pr is not None:
         prow = ctx.store.conn.execute("SELECT * FROM prs WHERE number = ?", (pr,)).fetchone()
-        if prow:
+        if prow and prow["state"] != "unreachable":
             body = f"{prow['title'] or ''}\n\n{prow['body'] or ''}"
             pe = add(type="pr", ref=f"#{pr}", url=prow["url"] or ctx.pr_url(pr), timestamp=None,
                      author=prow["author"], quote=clean(prow["title"] or "", max_len=200))
-            sig_ids |= {s for s, _ in extract_text(body)}
+            pr_sigs = extract_text(body, skip_refs=frozenset({f"#{pr}"}))
+            sig_ids |= {s for s, _ in pr_sigs}
+            signals = [*signals, *(x for x in pr_sigs if x[0] in LINK_SIGNALS and x not in signals)]
+            sig_ids |= set(extract_labels(json.loads(prow["labels"] or "[]")))
+            for reviewer in json.loads(prow["reviewers"] or "[]"):
+                authors.add(reviewer)
             if (q := reasons.stated_reason(prow["body"] or "")) and not stated:
                 stated, stated_ev, grade = q, pe.id, "A"
             constraints += reasons.constraints(prow["body"] or "")
@@ -212,7 +225,7 @@ def _record(
                         stated, stated_ev, grade = q, re_.id, "A"
         else:
             add(type="pr", ref=f"#{pr}", url=ctx.pr_url(pr), timestamp=None, author=None,
-                quote=None, retrieval_status="not_fetched")
+                quote=None, retrieval_status="unreachable" if prow else "not_fetched")
 
     links: list[str] = []
     for sid, detail in signals:
@@ -287,7 +300,6 @@ def _record(
 
     # Line history: later touches, regression chain, authors.
     later: list[str] = []
-    authors = {first.author}
     regression = 0
     if deep:
         try:
@@ -332,7 +344,7 @@ def _record(
     inputs = StrengthInputs(
         decision_type=dtype, grade=grade, links=links,
         positive_text_signals=sorted(s for s in sig_ids
-                                     if s.startswith("text.") and _weight_positive(s)),
+                                     if s.startswith(("text.", "label.")) and _weight_positive(s)),
         code_signals=[(s, _CODE_WEIGHT[s]) for s in sorted({s for s, _ in code_sigs})],
         age_days=max(0.0, (_now(ctx, target.rev) - first.author_time) / 86400),
         later_commits_to_file=later_count, regression_fixes=regression,
@@ -367,7 +379,7 @@ def _record(
 
 
 def _weight_positive(sid: str) -> bool:
-    return any(s.id == sid and s.weight > 0 for s in TEXT_SIGNALS)
+    return any(s.id == sid and s.weight > 0 for s in TEXT_SIGNALS + LABEL_SIGNALS)
 
 
 def _decision_type(sig_ids: set[str], code_sigs: list[tuple[str, str]], is_revert: bool) -> str:

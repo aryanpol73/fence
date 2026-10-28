@@ -98,7 +98,33 @@ TEXT_SIGNALS: tuple[Signal, ...] = (
                r"bump(ed|s)? [\w@/.-]+ from)\b")),
 )
 
-_BY_ID = {s.id: s for s in TEXT_SIGNALS}
+# PR/issue labels, matched against whole label names (case-insensitive).
+LABEL_SIGNALS: tuple[Signal, ...] = (
+    Signal("label.security", "label", 22, "labelled security", "security",
+           _rx(r"^(security|vulnerability|cve)\b")),
+    Signal("label.incident", "label", 20, "labelled incident/hotfix/p0", "incident",
+           _rx(r"^(incident|hotfix|p0|sev[ -]?[0-2]|outage|critical)\b")),
+    Signal("label.regression", "label", 12, "labelled regression", "bugfix",
+           _rx(r"^regression\b")),
+    Signal("label.bug", "label", 8, "labelled bug", "bugfix",
+           _rx(r"^(type: ?)?(bug|defect|fix)\b")),
+    Signal("label.performance", "label", 6, "labelled performance", "performance",
+           _rx(r"^(perf|performance)\b")),
+    Signal("label.chore", "negative", -6, "labelled chore/refactor/dependencies", "cleanup",
+           _rx(r"^(chore|refactor|dependencies|deps|documentation|docs)\b")),
+)
+
+
+def extract_labels(labels: list[str]) -> list[str]:
+    """Signal ids for a list of label names, in catalog order."""
+    out = []
+    for s in LABEL_SIGNALS:
+        if any(s.pattern.search(str(lb).strip()) for lb in labels if s.pattern):
+            out.append(s.id)
+    return out
+
+
+_BY_ID = {s.id: s for s in TEXT_SIGNALS + LABEL_SIGNALS}
 
 
 def signal(signal_id: str) -> Signal:

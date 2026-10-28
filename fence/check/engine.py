@@ -95,7 +95,7 @@ def effective_policy(cfg: Config, path: str) -> tuple[str, str, int, str]:
 
 def check(
     ctx: Context, spec: DiffSpec | None = None, *, diff_text: str | None = None,
-    base: str | None = None, deep: bool = True,
+    base: str | None = None, deep: bool = True, include_clear: bool = False,
 ) -> CheckResult:
     started = time.monotonic()
     if diff_text is None:
@@ -131,7 +131,8 @@ def check(
         result.blocks_checked += len(fd.blocks)
         try:
             result.findings += _check_file(ctx, fd, base_sha, diff_added, tests_removed,
-                                           acks, now, result.notes, deep=deep)
+                                           acks, now, result.notes, deep=deep,
+                                           include_clear=include_clear)
         except PreimageMismatch as e:
             raise DiffError(str(e)) from None
 
@@ -165,6 +166,7 @@ def _exit_code(cfg: Config, result: CheckResult) -> int:
 def _check_file(
     ctx: Context, fd: FileDiff, base_sha: str, diff_added: frozenset[int], tests_removed: bool,
     acks: list[ackmod.Ack], now: datetime, notes: list[str], *, deep: bool,
+    include_clear: bool = False,
 ) -> list[Finding]:
     path = fd.old_path or ""
     try:
@@ -216,7 +218,7 @@ def _check_file(
             if best is None or (VERDICT_ORDER.index(f.verdict), f.risk.value) > (
                     VERDICT_ORDER.index(best.verdict), best.risk.value):
                 best = f
-        if best is None or best.verdict == CLEAR:
+        if best is None or (best.verdict == CLEAR and not include_clear):
             continue
         best.ack = ackmod.find_valid(acks, best.decision.id, best.decision_fingerprint, now)
         findings.append(best)

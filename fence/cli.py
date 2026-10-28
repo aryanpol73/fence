@@ -112,9 +112,19 @@ def index(
                          progress=progress)
     except GitError as e:
         raise _fail(str(e)) from None
+    gh = None
+    if ctx.github_token and ctx.slug:
+        from fence.github.sync import sync
+
+        gh = sync(ctx)
     if json_out:
-        typer.echo(dumps({"schema": "fence/v1", "kind": "index", **rep.__dict__}))
+        typer.echo(dumps({"schema": "fence/v1", "kind": "index", **rep.__dict__,
+                          "github": gh.__dict__ if gh else None}))
         return
+    if gh and not quiet:
+        typer.echo(f"GitHub: {gh.prs} PRs, {gh.issues} issues, {gh.review_comments} review "
+                   f"comments fetched ({gh.requests} requests)"
+                   + (f"; stopped: {gh.stopped}" if gh.stopped else ""))
     if quiet:
         return
     typer.echo(f"Indexed {rep.indexed} new commit(s) in {rep.seconds:.1f}s; "
@@ -381,6 +391,8 @@ def backtest_cmd(
     = 200,
     rev: Annotated[str, typer.Option(help="Newest revision of the replayed range.")] = "HEAD",
     fast: Annotated[bool, typer.Option("--fast", help="Skip line-history walks.")] = False,
+    dump: Annotated[Path | None, typer.Option(help="Write every block outcome as JSONL.")]
+    = None,
     repo: RepoOpt = Path("."), json_out: JsonOpt = False,
 ) -> None:
     """Removal-Regret Backtest: would Fence have warned about removals later undone?"""
@@ -401,6 +413,11 @@ def backtest_cmd(
     except GitError as e:
         raise _fail(str(e)) from None
     s = rep.summary()
+    if dump:
+        import json
+
+        dump.write_text("".join(json.dumps(o.__dict__) + "\n" for o in rep.outcomes),
+                        encoding="utf-8")
     if json_out:
         examples = [o.__dict__ for o in rep.outcomes if o.regretted][:20]
         typer.echo(dumps({"schema": "fence/v1", "kind": "backtest", **s, "regretted_examples":

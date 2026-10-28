@@ -44,9 +44,31 @@ CODE_CASES: dict[str, tuple[str, str]] = {
 }
 
 
+LABEL_CASES: dict[str, tuple[str, str]] = {
+    "label.security": ("security", "secure-boot-docs"),
+    "label.incident": ("P0", "postcard"),
+    "label.regression": ("regression", "non-regression-test"),
+    "label.bug": ("type: bug", "debugger"),
+    "label.performance": ("performance", "imperformance"),
+    "label.chore": ("dependencies", "bug"),
+}
+
+
 def test_every_signal_has_cases() -> None:
+    from fence.signals.catalog import LABEL_SIGNALS
+
     assert {s.id for s in TEXT_SIGNALS} == set(TEXT_CASES)
     assert {s.id for s in CODE_SIGNALS} == set(CODE_CASES)
+    assert {s.id for s in LABEL_SIGNALS} == set(LABEL_CASES)
+
+
+@pytest.mark.parametrize("sid", sorted(LABEL_CASES))
+def test_label_signal(sid: str) -> None:
+    from fence.signals.catalog import extract_labels
+
+    fires, quiet = LABEL_CASES[sid]
+    assert sid in extract_labels([fires])
+    assert sid not in extract_labels([quiet])
 
 
 @pytest.mark.parametrize("sid", sorted(TEXT_CASES))

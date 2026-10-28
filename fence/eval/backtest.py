@@ -21,8 +21,9 @@ from fence.anchors.fingerprint import containment, shingles
 from fence.check.diff import DiffError, FileDiff, parse_diff
 from fence.check.engine import KEEP, VERIFY, check
 from fence.context import Context
+from fence.decisions.build import TEST_PATH
 from fence.git.runner import GitError
-from fence.lang import tokens_for
+from fence.lang import plugin_for, tokens_for
 
 MIN_TOKENS = 8
 RESTORE_CONTAINMENT = 0.8
@@ -56,6 +57,11 @@ class BlockOutcome:
     risk: int
     confidence: float | None
     reason: str | None
+    kind: str | None = None
+    grade: str | None = None
+    dtype: str | None = None
+    strength: int = 0
+    lost: int = 0
 
 
 @dataclass
@@ -182,7 +188,8 @@ def backtest(ctx: Context, *, rev: str = "HEAD", max_commits: int = 300, window:
                 if lc.sha in reverted_by:
                     kind, lead = "reverted", (lc.time - c.time) / 86400
                     break
-                if containment(sh, lc.all_added) >= RESTORE_CONTAINMENT:
+                # Same file only: boilerplate re-added elsewhere is not a restoration.
+                if containment(sh, lc.added.get(path, frozenset())) >= RESTORE_CONTAINMENT:
                     kind, lead = "restored", (lc.time - c.time) / 86400
                     break
             labels[(path, b.start)] = (kind, lead)
@@ -191,7 +198,7 @@ def backtest(ctx: Context, *, rev: str = "HEAD", max_commits: int = 300, window:
             else c.time - 1
         t0 = time.monotonic()
         try:
-            res = check(ctx, diff_text=c.diff, base=c.parent, deep=deep)
+            res = check(ctx, diff_text=c.diff, base=c.parent, deep=deep, include_clear=True)
         except (DiffError, GitError):
             rep.errors += 1
             continue
@@ -205,7 +212,11 @@ def backtest(ctx: Context, *, rev: str = "HEAD", max_commits: int = 300, window:
             verdict = f.verdict if f and f.verdict in (KEEP, VERIFY) else "CLEAR"
             o = BlockOutcome(c.sha, path, start, kind is not None, kind, lead, verdict,
                              f.risk.value if f else 0, f.risk.confidence if f else None,
-                             f.decision.reason_text if f else None)
+                             f.decision.reason_text if f else None,
+                             f.kind if f else None, f.decision.grade if f else None,
+                             f.decision.type if f else None,
+                             f.decision.strength.value if f else 0,
+                             len(f.lost_signals) if f else 0)
             rep.outcomes.append(o)
             rep.blocks += 1
             rep.regretted += o.regretted
@@ -227,7 +238,9 @@ def _removal_blocks(c: _Commit):
     out = []
     same_commit_added = c.all_added
     for f in c.files:
-        if f.old_path is None or f.binary:
+        # Source code only: tests, docs and data are not fences.
+        if (f.old_path is None or f.binary or plugin_for(f.old_path) is None
+                or TEST_PATH.search(f.old_path)):
             continue
         for b in f.blocks:
             toks = tokens_for(f.old_path, "\n".join(t for _, t in b.removed))
