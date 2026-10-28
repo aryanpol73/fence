@@ -105,7 +105,8 @@ def parse_line_porcelain(output: str) -> list[BlameLine]:
             header = (m.group(1), int(m.group(2)), int(m.group(3)))
             fields = {}
             continue
-        assert fields is not None
+        if fields is None:  # unreachable: always set together with header
+            raise GitError("blame parser lost its record state")
         if row.startswith("\t"):
             result.append(_build(header, fields, row[1:]))
             header, fields = None, None
