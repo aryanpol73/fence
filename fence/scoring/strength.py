@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 
 from fence.config import Config
 from fence.decisions.model import Factor, Score
+from fence.scoring import calibration
 
 WEIGHTS: dict[str, float] = {
     # origin type (strongest type only)
@@ -167,8 +168,10 @@ def change_risk(
         f.append(Factor("risk.low_signal_path", cut,
                         f"docs/config/generated path: risk scaled by {keep:g}"))
     value = int(round(max(0.0, min(100.0, sum(x.points for x in f)))))
+    cal = calibration.lookup(value)
     return Score(value, cfg.scoring.band(value), s.confidence, (*f, *s.factors),
-                 s.what_would_change)
+                 s.what_would_change, round(cal.rate, 4) if cal else None,
+                 cal.n if cal else None)
 
 
 def _grade_reason(g: str) -> str:

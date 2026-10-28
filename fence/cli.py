@@ -499,10 +499,10 @@ def backtest_cmd(
     for k, v in s.items():
         if k != "calibration":
             typer.echo(f"{k:<32} {v}")
-    typer.echo("calibration (warned blocks by confidence):")
+    typer.echo("calibration (all blocks per shipped risk bin):")
     for b in s["calibration"]:
-        typer.echo(f"  {b['confidence']}: {b['warned']} warned, {b['regretted']} regretted, "
-                   f"observed precision {b['observed_precision']}")
+        typer.echo(f"  risk {b['risk']}: table {b['table_rate']}, observed {b['observed_rate']} "
+                   f"({b['regretted']}/{b['blocks']})")
     typer.echo("Note: regret labels are a lower bound, so precision is conservative.")
 
 

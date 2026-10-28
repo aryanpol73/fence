@@ -117,7 +117,10 @@ def finding_text(f: Finding, o: Out, base: str, head_is_base: bool) -> list[str]
     label = o.c(f"{f.verdict:<6}", f.verdict, bold=True)
     acked = " | ACKNOWLEDGED" if f.ack else ""
     lines = [f"{label} {f.path}:{span}  {f.kind}  risk {r.value} ({r.band}) | "
-             f"confidence {r.confidence:.2f} | grade {d.grade}{acked}"]
+             f"evidence confidence {r.confidence:.2f} | grade {d.grade}{acked}"]
+    if r.regret_rate is not None:
+        lines.append(f"  Outcome: removals at this risk were later restored or reverted "
+                     f"{r.regret_rate:.0%} of the time (backtest, n={r.regret_n}).")
     preview = f.removed_preview.split("\n")
     lines.append(f"  Change: {f.kind_reason}: " + preview[0].strip()
                  + (f" (+{len(preview) - 1} lines)" if len(preview) > 1 else ""))

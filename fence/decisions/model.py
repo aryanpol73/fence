@@ -57,6 +57,10 @@ class Score:
     confidence: float
     factors: tuple[Factor, ...]
     what_would_change: tuple[str, ...] = ()
+    # Change Risk only: observed regret rate for this risk level in the shipped
+    # backtest calibration table, and how many blocks that rate rests on.
+    regret_rate: float | None = None
+    regret_n: int | None = None
 
     def top(self, n: int = 3) -> tuple[Factor, ...]:
         return tuple(sorted(self.factors, key=lambda f: (-abs(f.points), f.id))[:n])

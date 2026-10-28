@@ -110,20 +110,34 @@ class BacktestReport:
                                   if self.latencies else None),
             "median_lead_days": round(statistics.median(self.leads), 1) if self.leads else None,
             "calibration": self.calibration(),
+            "calibration_monotonic": self.calibration_monotonic(),
             "errors": self.errors,
             "seconds": round(self.seconds, 1),
         }
 
     def calibration(self) -> list[dict]:
-        buckets = [(0.0, 0.4), (0.4, 0.6), (0.6, 0.8), (0.8, 1.01)]
+        """Observed regret rate of ALL blocks per bin of the shipped calibration table.
+
+        On repos the table was not fitted on, this is the held-out check: rates should
+        rise with the bins, and the observed rate should be near the table's.
+        """
+        from fence.scoring import calibration
+
+        bins, _ = calibration.load()
         out = []
-        for lo, hi in buckets:
-            xs = [o for o in self.outcomes if o.verdict in (KEEP, VERIFY)
-                  and o.confidence is not None and lo <= o.confidence < hi]
-            out.append({"confidence": f"{lo:.1f}-{min(hi, 1.0):.1f}", "warned": len(xs),
-                        "regretted": sum(o.regretted for o in xs),
-                        "observed_precision": self._ratio(sum(o.regretted for o in xs), len(xs))})
+        for b in bins:
+            xs = [o for o in self.outcomes if b.risk_min <= o.risk <= b.risk_max]
+            k = sum(o.regretted for o in xs)
+            out.append({"risk": f"{b.risk_min}-{b.risk_max}", "table_rate": round(b.rate, 4),
+                        "blocks": len(xs), "regretted": k,
+                        "observed_rate": self._ratio(k, len(xs))})
         return out
+
+    def calibration_monotonic(self) -> bool | None:
+        rates = [c["observed_rate"] for c in self.calibration() if c["blocks"]]
+        if len(rates) < 2:
+            return None
+        return all(a < b for a, b in zip(rates, rates[1:], strict=False))
 
 
 def _stream_commits(ctx: Context, rev: str, limit: int) -> list[_Commit]:
