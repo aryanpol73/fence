@@ -8,6 +8,11 @@ dependencies = [
     "typer>=0.12",
     "unidiff>=0.7.5",
     "pydantic>=2.6",
+    "tree-sitter>=0.23",
+    "tree-sitter-javascript>=0.23",
+    "tree-sitter-typescript>=0.23",
+    "tree-sitter-go>=0.23",
+    "tree-sitter-java>=0.23",
 ]
 
 [project.scripts]
@@ -38,5 +43,5 @@ select = ["E", "F", "I", "B", "UP", "S"]
 ignore = ["S603", "S607"]  # we call git via list-form subprocess on purpose; see fence/git/runner.py
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S108"]
+"tests/**" = ["S101", "S108", "E501"]
 "demo/**" = ["S101"]

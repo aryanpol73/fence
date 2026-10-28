@@ -10,9 +10,9 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 
 from fence.diffing.ranges import RemovedRange
-from fence.diffing.symbols import Symbol, enclosing_symbol
 from fence.git.blame import BlameLine, blame
 from fence.git.runner import GitError, Repo
+from fence.lang import Symbol, enclosing_symbol
 
 
 class PreimageMismatch(GitError):
@@ -55,5 +55,5 @@ def trace(repo: Repo, base: str, ranges: Sequence[RemovedRange]) -> list[TraceRe
         blamed = {bl.final_line: bl for bl in blame(repo, base_sha, path, spans)}
         for r in path_ranges:
             lines = tuple(blamed[n] for n in range(r.start, r.end + 1))
-            results.append(TraceResult(r, enclosing_symbol(text, r.start), lines))
+            results.append(TraceResult(r, enclosing_symbol(path, text, r.start), lines))
     return results

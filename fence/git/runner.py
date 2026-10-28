@@ -113,6 +113,50 @@ class Repo:
             raise GitError(f"file too large to read: {rel} ({size} bytes)")
         return self.run(["show", f"{sha}:{rel}"])
 
+    def read_blobs(
+        self, specs: Sequence[tuple[str, str]], *, max_bytes: int = 1_000_000
+    ) -> dict[tuple[str, str], str | None]:
+        """Read many `(commit_sha, path)` blobs with two git processes total.
+
+        Missing, binary-looking or oversized blobs map to None. Sizes are checked with
+        --batch-check first, so oversized content is never transferred.
+        """
+        ok = [
+            (sha, path) for sha, path in dict.fromkeys(specs)
+            if re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", sha)
+            and path and "\n" not in path and "\r" not in path
+        ]
+        result: dict[tuple[str, str], str | None] = {s: None for s in specs}
+        if not ok:
+            return result
+        query = "".join(f"{sha}:{path}\n" for sha, path in ok).encode("utf-8")
+        checks = _run_bytes(["cat-file", "--batch-check"], cwd=self.root, timeout=self.timeout,
+                            input=query).decode("utf-8", "replace").split("\n")
+        small = []
+        for spec, line in zip(ok, checks, strict=False):
+            parts = line.split(" ")
+            if len(parts) == 3 and parts[1] == "blob" and parts[2].isdigit():
+                if int(parts[2]) <= max_bytes:
+                    small.append(spec)
+        if not small:
+            return result
+        query = "".join(f"{sha}:{path}\n" for sha, path in small).encode("utf-8")
+        out = _run_bytes(["cat-file", "--batch"], cwd=self.root, timeout=self.timeout,
+                         input=query)
+        pos = 0
+        for spec in small:
+            nl = out.index(b"\n", pos)
+            header = out[pos:nl].decode("utf-8", "replace").split(" ")
+            pos = nl + 1
+            if len(header) != 3 or not header[2].isdigit():
+                continue
+            size = int(header[2])
+            data = out[pos : pos + size]
+            pos += size + 1  # content is followed by a newline
+            if b"\x00" not in data[:8000]:
+                result[spec] = data.decode("utf-8", "replace")
+        return result
+
     def stream(
         self, args: Sequence[str], *, timeout: float | None = None, chunk_size: int = 65536
     ) -> Iterator[str]:
@@ -168,6 +212,25 @@ def _stream(args: Sequence[str], *, cwd: Path, timeout: float, chunk_size: int) 
             raise GitError(
                 f"git {args[0] if args else ''} failed ({returncode}): {stderr[:MAX_STDERR_CHARS]}"
             )
+
+
+def _run_bytes(args: Sequence[str], *, cwd: Path, timeout: float, input: bytes) -> bytes:
+    if isinstance(args, str):
+        raise TypeError("git args must be a list, not a string")
+    argv = ["git", "-c", "core.fsmonitor=false", "-c", "core.quotePath=false", *args]
+    try:
+        proc = subprocess.run(
+            argv, cwd=cwd, env=_git_env(), input=input, capture_output=True, timeout=timeout,
+            check=False, shell=False,
+        )
+    except subprocess.TimeoutExpired:
+        raise GitTimeout(f"git {args[0] if args else ''} timed out after {timeout}s") from None
+    except FileNotFoundError:
+        raise GitError("git executable not found") from None
+    if proc.returncode != 0:
+        stderr = proc.stderr.decode("utf-8", "replace").strip()[:MAX_STDERR_CHARS]
+        raise GitError(f"git {args[0] if args else ''} failed ({proc.returncode}): {stderr}")
+    return proc.stdout
 
 
 def _run(args: Sequence[str], *, cwd: Path, timeout: float) -> str:
