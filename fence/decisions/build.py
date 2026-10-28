@@ -172,7 +172,8 @@ def _record(
 
     commit_ev = add(
         type="commit", ref=sha, url=ctx.commit_url(sha), timestamp=first.author_time,
-        author=clean(first.author, max_len=80), quote=clean(message, max_len=600),
+        author=clean(first.author, max_len=80),
+        quote=clean(message, max_len=600, keep_newlines=True),
         retrieval_status=("orphaned" if row and row.orphaned else "ok" if row else "not_indexed"),
     )
     signals = (ctx.store.signals_for(sha) if row

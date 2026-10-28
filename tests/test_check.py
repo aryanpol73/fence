@@ -59,9 +59,11 @@ def test_ack_clears_the_block_and_is_invalidated_by_code_change(demo: dict) -> N
     res = check(ctx, DiffSpec(base="main", head="cleanup-payments"))
     f = res.findings[0]
     ledger = ctx.repo.root / ctx.cfg.policy.ack_ledger
-    acks.append(ledger, decision_id=f.decision.id, path=f.path, fingerprint=f.decision_fingerprint,
-                reason="Gateway now dedupes by idempotency key", who="t@example.com",
-                expiry_days=30)
+    for g in res.findings:  # acks are per block
+        acks.append(ledger, decision_id=g.decision.id, path=g.path,
+                    fingerprint=g.decision_fingerprint,
+                    reason="Gateway now dedupes by idempotency key", who="t@example.com",
+                    expiry_days=30)
     try:
         again = check(ctx, DiffSpec(base="main", head="cleanup-payments"))
         assert again.exit_code == EXIT_OK and again.findings[0].ack is not None

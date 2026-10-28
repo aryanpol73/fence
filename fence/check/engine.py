@@ -208,7 +208,8 @@ def _check_file(
             f = Finding(
                 path=path, start=b.start, end=b.end, kind=cls.kind, kind_reason=cls.reason,
                 verdict=_verdict(ctx.cfg, d, risk, fail_on, cls), risk=risk, decision=d,
-                decision_fingerprint=_decision_fingerprint(path, base_lines, d),
+                decision_fingerprint=fingerprint(tokens_for(path, "\n".join(
+                    t for n, t in b.removed if owner.get(n) is d))).exact,
                 removed_preview=clean("\n".join(t for _, t in b.removed[:6]), max_len=400),
                 lost_signals=cls.lost_signals,
             )
