@@ -22,6 +22,7 @@ from pathlib import Path, PurePosixPath
 
 DEFAULT_TIMEOUT_SECONDS = 10.0
 MAX_STDERR_CHARS = 500
+_VERIFIED: set[tuple[str, str]] = set()
 
 # Characters git allows in refs that we also accept: names, SHAs, HEAD~2, main^, origin/main.
 _REF_PATTERN = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9._/~^@{}-]*$")
@@ -73,12 +74,18 @@ class Repo:
         """Return the full commit SHA for `ref`, or raise UnsafeInput / GitError."""
         if not ref or not _REF_PATTERN.match(ref) or ".." in ref:
             raise UnsafeInput(f"rejected ref: {ref!r}")
+        # A full SHA that resolved to a commit once always will: memoize those only.
+        key = (str(self.root), ref)
+        if key in _VERIFIED:
+            return ref
         out = self.run(
             ["rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}"]
         )
         sha = out.strip()
         if not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", sha):
             raise GitError(f"could not resolve ref: {ref!r}")
+        if sha == ref and len(_VERIFIED) < 100_000:
+            _VERIFIED.add(key)
         return sha
 
     def safe_relpath(self, path: str | Path) -> str:

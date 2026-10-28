@@ -47,8 +47,23 @@ class BlameLine:
     ignored: bool = False
 
 
+_IGNORE_CACHE: dict[tuple[str, str], list[str]] = {}
+
+
 def read_ignore_revs(repo: Repo, base_sha: str) -> list[str]:
-    """Full SHAs listed in .git-blame-ignore-revs at `base_sha`. Missing file -> []."""
+    """Full SHAs listed in .git-blame-ignore-revs at `base_sha`. Missing file -> [].
+
+    Memoized per (repo, commit): a commit's tree never changes. Returns a copy.
+    """
+    key = (str(repo.root), base_sha)
+    if key not in _IGNORE_CACHE:
+        if len(_IGNORE_CACHE) > 10_000:
+            _IGNORE_CACHE.clear()
+        _IGNORE_CACHE[key] = _read_ignore_revs(repo, base_sha)
+    return list(_IGNORE_CACHE[key])
+
+
+def _read_ignore_revs(repo: Repo, base_sha: str) -> list[str]:
     listed = repo.run(["ls-tree", "--name-only", base_sha, "--", IGNORE_REVS_PATH]).strip()
     if not listed:
         return []
