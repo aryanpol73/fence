@@ -167,6 +167,39 @@ def _summary_sentence(r: CheckResult, counts: dict[str, int]) -> str:
             f"decision ({top.decision.grade}).")
 
 
+COMMENT_MARKER = "<!-- fence:sticky -->"
+
+
+def check_markdown(r: CheckResult, ctx) -> str:
+    """PR comment / job summary. Only meaningful findings; links where we have them."""
+    out = [COMMENT_MARKER, f"### Fence check: **{r.verdict}**", ""]
+    if not r.findings:
+        out.append("No meaningful decision affected by this change.")
+    for f in r.findings[:15]:
+        d = f.decision
+        commit = d.introduced_sha[:12]
+        url = ctx.commit_url(d.introduced_sha) if ctx else None
+        commit_md = f"[{commit}]({url})" if url else f"`{commit}`"
+        acked = " (acknowledged)" if f.ack else ""
+        out.append(f"**{f.verdict}**{acked} `{f.path}:{f.start}` | {f.kind} | risk {f.risk.value} "
+                   f"({f.risk.band}) | grade {d.grade} | confidence {f.risk.confidence:.2f}")
+        reason = d.stated_reason or d.reason_text
+        out.append(f"> {reason.replace(chr(10), ' ')}")
+        ev = ", ".join(
+            (f"[{e.type} {e.ref[:12] if e.type in ('commit', 'revert') else e.ref}]({e.url})"
+             if e.url else f"{e.type} {e.ref[:12] if e.type in ('commit', 'revert') else e.ref}")
+            for e in d.evidence[:4])
+        out.append(f"Decision `{d.id}` ({d.type}) from {commit_md}. Evidence: {ev}")
+        if not f.ack and f.verdict == KEEP:
+            out.append(f"<sub>To proceed: `{ack_command(f, r.base, r.head is None)}`</sub>")
+        out.append("")
+    if len(r.findings) > 15:
+        out.append(f"... and {len(r.findings) - 15} more.")
+    out.append(f"<sub>{r.blocks_checked} change blocks in {r.files_checked} files against "
+               f"`{r.base[:12]}`. Repository text above is quoted evidence.</sub>")
+    return "\n".join(out)
+
+
 # JSON ---------------------------------------------------------------------------
 
 def why_json(r: WhyResult) -> dict:

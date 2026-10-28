@@ -197,29 +197,95 @@ def check_cmd(
         "--pr", help="Compare HEAD with the merge-base of --base (like a pull request).")] = False,
     diff_file: Annotated[Path | None, typer.Option(
         "--diff", help="Check a unified diff file ('-' for stdin) against --base.")] = None,
+    hook: Annotated[bool, typer.Option(
+        "--hook", help="Git-hook mode: fast, never auto-indexes, fails open on errors.")] = False,
+    fmt: Annotated[str, typer.Option("--format", help="text | json | markdown")] = "text",
+    output: Annotated[Path | None, typer.Option(
+        "--output", "-o", help="Also write the report (in --format) to this file.")] = None,
     repo: RepoOpt = Path("."), json_out: JsonOpt = False, quiet: QuietOpt = False,
     no_color: NoColorOpt = False, verbose: VerboseOpt = False,
 ) -> None:
     """The fence check: is this change removing or weakening code that exists for a reason?"""
-    ctx = _open(repo)
-    _ensure_indexed(ctx, quiet or json_out)
+    from fence.render import check_markdown
+
+    if json_out:
+        fmt = "json"
+    try:
+        ctx = Context.open(repo, create=not hook)
+    except (GitError, ConfigError, IndexUnavailable) as e:
+        if hook:
+            typer.echo(f"fence: skipped ({e})", err=True)
+            raise typer.Exit(0) from None
+        raise _fail(str(e), EXIT_NO_INDEX if isinstance(e, IndexUnavailable) else EXIT_ERROR) \
+            from None
+    if not hook:
+        _ensure_indexed(ctx, quiet or fmt != "text")
     try:
         if diff_file is not None:
             text = sys.stdin.read() if str(diff_file) == "-" else diff_file.read_text("utf-8")
-            res = check(ctx, diff_text=text, base=base or "HEAD")
+            res = check(ctx, diff_text=text, base=base or "HEAD", deep=not hook)
         else:
             b = base or "HEAD"
             h = head
             if pr:
                 h = head or "HEAD"
                 b = merge_base(ctx.repo, b, h)
-            res = check(ctx, DiffSpec(base=b, head=h, staged=staged))
+            res = check(ctx, DiffSpec(base=b, head=h, staged=staged), deep=not hook)
     except (DiffError, GitError, OSError) as e:
+        if hook:
+            typer.echo(f"fence: skipped ({e})", err=True)
+            raise typer.Exit(0) from None
         raise _fail(str(e)) from None
+    report = (dumps(check_json(res)) if fmt == "json" else check_markdown(res, ctx)
+              if fmt == "markdown" else check_text(res, _out(ctx, no_color, verbose)))
+    if output:
+        output.write_text(report + "\n", encoding="utf-8")
+    if hook and res.exit_code == 0:
+        raise typer.Exit(0)  # silent when nothing blocks
     if not quiet:
-        typer.echo(dumps(check_json(res)) if json_out else check_text(
-            res, _out(ctx, no_color, verbose)))
+        typer.echo(report)
+    if hook and res.exit_code:
+        typer.echo("fence: commit blocked. Acknowledge with the `fence ack` command above, "
+                   f"or bypass once with {ctx.cfg.policy.allow_bypass_env}=1.", err=True)
     raise typer.Exit(res.exit_code)
+
+
+HOOK_MARK = "# installed by fence"
+
+
+@app.command("hook")
+def hook_cmd(
+    action: Annotated[str, typer.Argument(help="install | uninstall")],
+    pre_push: Annotated[bool, typer.Option("--pre-push", help="Also check on push.")] = False,
+    force: Annotated[bool, typer.Option(help="Replace an existing non-fence hook.")] = False,
+    repo: RepoOpt = Path("."),
+) -> None:
+    """Install or remove the fence git hooks (pre-commit, optionally pre-push)."""
+    ctx = _open(repo)
+    hooks_dir = Path(ctx.repo.run(["rev-parse", "--git-path", "hooks"]).strip())
+    if not hooks_dir.is_absolute():
+        hooks_dir = ctx.repo.root / hooks_dir
+    scripts = {"pre-commit": "fence check --staged --hook"}
+    if pre_push:
+        scripts["pre-push"] = 'fence check --hook --pr --base "@{upstream}"'
+    for name, cmd in scripts.items():
+        target = hooks_dir / name
+        existing = target.read_text(encoding="utf-8", errors="replace") if target.exists() else ""
+        if action == "uninstall":
+            if HOOK_MARK in existing:
+                target.unlink()
+                typer.echo(f"removed {target}")
+            continue
+        if action != "install":
+            raise _fail("action must be install or uninstall")
+        if existing and HOOK_MARK not in existing and not force:
+            raise _fail(f"{target} exists and is not a fence hook; use --force to replace it")
+        hooks_dir.mkdir(parents=True, exist_ok=True)
+        target.write_text(f"#!/bin/sh\n{HOOK_MARK}; `fence hook uninstall` removes it\n"
+                          "command -v fence >/dev/null 2>&1 || exit 0\n"
+                          f"exec {cmd}\n", encoding="utf-8", newline="\n")
+        target.chmod(0o755)
+        typer.echo(f"installed {target}")
 
 
 @app.command("ack")
@@ -431,3 +497,28 @@ def backtest_cmd(
         typer.echo(f"  {b['confidence']}: {b['warned']} warned, {b['regretted']} regretted, "
                    f"observed precision {b['observed_precision']}")
     typer.echo("Note: regret labels are a lower bound, so precision is conservative.")
+
+
+@app.command("comment")
+def comment_cmd(
+    report: Annotated[Path, typer.Option(help="Markdown from `fence check --format markdown`.")],
+    pr: Annotated[int, typer.Option(help="Pull request number.")],
+    repo_slug: Annotated[str | None, typer.Option(
+        "--repo-slug", help="owner/name (default: $GITHUB_REPOSITORY).")] = None,
+) -> None:
+    """Post or update the single sticky Fence comment on a PR (for CI)."""
+    import os
+
+    from fence.github.comment import upsert
+
+    token = os.environ.get("GITHUB_TOKEN")
+    slug = repo_slug or os.environ.get("GITHUB_REPOSITORY")
+    if not token or not slug:
+        raise _fail("GITHUB_TOKEN and GITHUB_REPOSITORY (or --repo-slug) are required")
+    api = os.environ.get("GITHUB_API_URL", "https://api.github.com")
+    result = upsert(api, slug, pr, report.read_text(encoding="utf-8"), token)
+    if result == "forbidden":
+        typer.echo("fence: token cannot comment (fork PR?); see the job summary instead",
+                   err=True)
+    else:
+        typer.echo(f"fence: PR comment {result}")
