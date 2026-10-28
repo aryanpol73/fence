@@ -312,7 +312,12 @@ def _record(
     # Type and grade C.
     dtype = _decision_type(sig_ids, code_sigs, reverted is not None)
     inferred = None
-    if grade == "D" and dtype not in ("unknown", "cleanup"):
+    # Grade C needs a history signal (message, label, revert). The code's shape alone
+    # (it has a lock) says what the code does, not why it was added.
+    history_types = {_TEXT_TYPE[s] for s in sig_ids if _TEXT_TYPE.get(s)}
+    if reverted:
+        history_types.add("revert")
+    if grade == "D" and dtype in history_types and dtype not in ("unknown", "cleanup"):
         grade = "C"
         cues = [d for s, d in signals if _TEXT_TYPE.get(s) == dtype][:2]
         cue = f" ({', '.join(repr(clean(c, max_len=40)) for c in cues)})" if cues else ""

@@ -34,7 +34,10 @@ class TraceResult:
         return tuple(seen.values())
 
 
-def trace(repo: Repo, base: str, ranges: Sequence[RemovedRange]) -> list[TraceResult]:
+def trace(
+    repo: Repo, base: str, ranges: Sequence[RemovedRange], *,
+    extra_ignore: Sequence[str] = (),
+) -> list[TraceResult]:
     base_sha = repo.verify_ref(base)
     by_path: dict[str, list[RemovedRange]] = {}
     for r in ranges:
@@ -52,7 +55,10 @@ def trace(repo: Repo, base: str, ranges: Sequence[RemovedRange]) -> list[TraceRe
                     "was the diff made against a different base?"
                 )
         spans = [(r.start, r.end) for r in path_ranges]
-        blamed = {bl.final_line: bl for bl in blame(repo, base_sha, path, spans)}
+        blamed = {
+            bl.final_line: bl
+            for bl in blame(repo, base_sha, path, spans, extra_ignore=extra_ignore)
+        }
         for r in path_ranges:
             lines = tuple(blamed[n] for n in range(r.start, r.end + 1))
             results.append(TraceResult(r, enclosing_symbol(path, text, r.start), lines))

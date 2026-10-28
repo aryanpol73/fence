@@ -116,7 +116,7 @@ def _commit(repo: Path, files: dict[str, str], message: str, who: str, date: str
     for rel, content in files.items():
         target = repo / rel
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(content)
+        target.write_text(content, newline="\n")  # same bytes, so same SHAs, on every OS
         _git(repo, "add", rel)
     _git(repo, "commit", "-q", "-m", message, who=who, date=date)
     return _git(repo, "rev-parse", "HEAD")

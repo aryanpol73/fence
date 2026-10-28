@@ -214,7 +214,9 @@ def _stream(args: Sequence[str], *, cwd: Path, timeout: float, chunk_size: int) 
             )
 
 
-def _run_bytes(args: Sequence[str], *, cwd: Path, timeout: float, input: bytes) -> bytes:
+def _run_bytes(
+    args: Sequence[str], *, cwd: Path, timeout: float, input: bytes | None = None
+) -> bytes:
     if isinstance(args, str):
         raise TypeError("git args must be a list, not a string")
     argv = ["git", "-c", "core.fsmonitor=false", "-c", "core.quotePath=false", *args]
@@ -234,27 +236,6 @@ def _run_bytes(args: Sequence[str], *, cwd: Path, timeout: float, input: bytes) 
 
 
 def _run(args: Sequence[str], *, cwd: Path, timeout: float) -> str:
-    if isinstance(args, str):  # a str is a Sequence too; refuse it so nobody builds shell strings
-        raise TypeError("git args must be a list, not a string")
-    argv = ["git", "-c", "core.fsmonitor=false", "-c", "core.quotePath=false", *args]
-    try:
-        proc = subprocess.run(
-            argv,
-            cwd=cwd,
-            env=_git_env(),
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=timeout,
-            check=False,
-            shell=False,
-        )
-    except subprocess.TimeoutExpired:
-        raise GitTimeout(f"git {args[0] if args else ''} timed out after {timeout}s") from None
-    except FileNotFoundError:
-        raise GitError("git executable not found") from None
-    if proc.returncode != 0:
-        stderr = proc.stderr.strip()[:MAX_STDERR_CHARS]
-        raise GitError(f"git {args[0] if args else ''} failed ({proc.returncode}): {stderr}")
-    return proc.stdout
+    # Bytes in, decoded here: text mode would translate CRLF to LF and hand back
+    # file content that differs from the blob (and from any diff of it).
+    return _run_bytes(args, cwd=cwd, timeout=timeout).decode("utf-8", errors="replace")
