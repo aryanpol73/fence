@@ -18,7 +18,9 @@ _REASON = re.compile(
     r"\b(because|since|so that|otherwise|or else|to (prevent|avoid|stop|ensure|guard|protect)|"
     r"prevents?|prevented|caus(e|es|ed|ing)|produc(es|ed|ing)|led to|leads to|"
     r"result(s|ed)? in|in order to|due to|required (by|for)|needed (by|for)|"
-    r"without (this|it)|was (failing|crashing|breaking|timing out)|broke|breaks)\b",
+    r"without (this|it)|was (failing|crashing|breaking|timing out)|broke|breaks|"
+    # purpose clauses: "... so a typo cannot weaken policy"
+    r"so (that )?(\w+ ){0,5}(cannot|can't|won't|will not|never|doesn't|does not))\b",
     re.IGNORECASE,
 )
 _TRAILER = re.compile(r"^[\w-]+(-by)?:\s", re.IGNORECASE)
@@ -47,40 +49,18 @@ def is_injection(sentence: str) -> bool:
     return bool(_INJECTION.search(sentence))
 
 
-_WORD = re.compile(r"[A-Za-z][A-Za-z0-9]{2,}")
-_STOP = {"the", "and", "for", "this", "that", "with", "from", "not", "are", "was", "but",
-         "def", "return", "self", "none", "true", "false", "import", "func", "var", "let",
-         "const", "class", "public", "private", "static", "void", "int", "str", "new"}
+def stated_reason(text: str) -> str | None:
+    """The first sentence in `text` that states a reason, verbatim, or None.
 
-
-def words(text: str) -> set[str]:
-    """Lower-case identifier parts (snake and camel case split), minus stop words."""
-    out = set()
-    for w in _WORD.findall(text):
-        for part in re.split(r"_|(?<=[a-z])(?=[A-Z])", w):
-            p = part.lower()
-            if len(p) >= 3 and p not in _STOP:
-                out.add(p)
-    return out
-
-
-def stated_reason(text: str, context: set[str] | None = None) -> str | None:
-    """A sentence in `text` that states a reason, verbatim, or None.
-
-    With `context` (words from the code and file name), the reason sentence sharing the
-    most words with it wins, so a multi-topic commit does not attach its first reason
-    to every line it touched. Ties keep the earliest sentence.
+    Which text is about which code is decided before this call (see relevance.py);
+    this function only finds the reason sentence.
     """
-    best: tuple[int, int, str] | None = None
-    for i, s in enumerate(sentences(text)):
-        if is_injection(s) or not _REASON.search(s):
+    for s in sentences(text):
+        if is_injection(s):
             continue
-        score = len(words(s) & context) if context else 0
-        if best is None or score > best[0]:
-            best = (score, i, s)
-        if not context:
-            break
-    return clean(best[2], max_len=MAX_QUOTE) if best else None
+        if _REASON.search(s):
+            return clean(s, max_len=MAX_QUOTE)
+    return None
 
 
 _CONSTRAINT = re.compile(

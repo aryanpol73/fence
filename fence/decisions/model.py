@@ -90,6 +90,11 @@ class DecisionRecord:
     supersedes: list[str] = field(default_factory=list)
     superseded_by: list[str] = field(default_factory=list)
     pr_number: int | None = None
+    # Where the reason applies: "code" when the evidence is about these lines (a
+    # focused change, or text naming this code), "change" when only the change as a
+    # whole states it (then it is never stated_reason), None when there is no reason.
+    reason_scope: str | None = None
+    change_reason: str | None = None  # verbatim, change-level; see reason_scope
 
     @property
     def reason_text(self) -> str:

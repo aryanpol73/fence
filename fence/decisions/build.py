@@ -15,14 +15,14 @@ from dataclasses import dataclass, field, replace
 from fence.anchors.fingerprint import containment, shingles
 from fence.check.diff import DiffError, parse_diff
 from fence.context import Context
-from fence.decisions import obsolete, reasons
+from fence.decisions import obsolete, reasons, relevance
 from fence.decisions.model import Anchor, DecisionRecord, Evidence
 from fence.git.blame import BlameLine, blame
 from fence.git.log import log_line_range
 from fence.git.runner import GitError
 from fence.globs import match_any
 from fence.index.store import CommitRow
-from fence.lang import enclosing_symbol, plugin_for, tokens_for
+from fence.lang import MODULE, enclosing_symbol, plugin_for, tokens_for
 from fence.scoring.strength import StrengthInputs, strength
 from fence.signals.catalog import (
     DECISION_TYPES,
@@ -244,7 +244,21 @@ def _record(
     message = row.message if row else first.summary
     ev: list[Evidence] = []
     authors = {first.author}
-    ctx_words = reasons.words(" ".join(bl.content for bl in bls) + " " + filename)
+
+    # The code this record covers, and which change text is evidence for it.
+    owned = [bl.final_line for bl in bls]
+    spans = _ranges(owned)
+    code_lines = [lines[n - 1] for n in owned if n - 1 < len(lines)]
+    plugin = plugin_for(target.path)
+    syms = (plugin.symbols("\n".join(lines)) if plugin else None) or []
+    span_syms = [s.qualname for s in syms
+                 if any(s.start_line <= b and s.end_line >= a for a, b in spans)]
+    changes = ctx.store.changes_for(sha) if row else []
+    scope = relevance.build_scope(
+        filename, [(c.path, (c.added or 0) + (c.deleted or 0)) for c in changes] if row
+        else [(filename, 1), ("<unknown>", 1)],
+        code_lines, span_syms, test_pattern=TEST_PATH,
+        low_signal=ctx.cfg.scoring.low_signal_paths)
 
     def add(**kw) -> Evidence:
         e = Evidence(id=f"E{len(ev) + 1}", **kw)
@@ -259,7 +273,11 @@ def _record(
     )
     signals = (ctx.store.signals_for(sha) if row
                else extract_text(message))
-    sig_ids = {s for s, _ in signals}
+    sig_ids = {s for s, _ in signals}  # whole change: evidence links shown to the reader
+    rel_message = relevance.relevant_text(message, scope)
+    # Signals from text that is about this code; they decide type, grade C and strength.
+    rel_signals = signals if scope.focused else extract_text(rel_message)
+    rel_ids = {s for s, _ in rel_signals}
 
     stated: str | None = None
     stated_ev: str | None = None
@@ -280,17 +298,28 @@ def _record(
             pr_sigs = extract_text(body, skip_refs=frozenset({f"#{pr}"}))
             sig_ids |= {s for s, _ in pr_sigs}
             signals = [*signals, *(x for x in pr_sigs if x[0] in LINK_SIGNALS and x not in signals)]
-            sig_ids |= set(extract_labels(json.loads(prow["labels"] or "[]")))
+            rel_body = relevance.relevant_text(prow["body"] or "", scope)
+            rel_pr = extract_text(relevance.relevant_text(body, scope),
+                                  skip_refs=frozenset({f"#{pr}"}))
+            rel_signals = [*rel_signals, *(x for x in rel_pr if x not in rel_signals)]
+            rel_ids |= {s for s, _ in rel_pr}
+            if scope.focused:  # labels describe the whole PR
+                rel_ids |= set(extract_labels(json.loads(prow["labels"] or "[]")))
             for reviewer in json.loads(prow["reviewers"] or "[]"):
                 authors.add(reviewer)
-            if (q := reasons.stated_reason(prow["body"] or "", ctx_words)) and not stated:
+            if (q := reasons.stated_reason(rel_body)) and not stated:
                 stated, stated_ev, grade = q, pe.id, "A"
-            constraints += reasons.constraints(prow["body"] or "")
-            alternatives += reasons.alternatives(prow["body"] or "")
+            constraints += reasons.constraints(rel_body)
+            alternatives += reasons.alternatives(rel_body)
             for rc in ctx.store.conn.execute(
                 "SELECT * FROM review_comments WHERE pr_number = ? ORDER BY id", (pr,)
             ):
-                q = reasons.stated_reason(rc["body"] or "")
+                # A line comment on this file is about this code; a review summary is
+                # PR-level text and gets the same scoping as the PR body.
+                on_file = rc["path"] in (filename, target.path)
+                text = (rc["body"] or "") if on_file else relevance.relevant_text(
+                    rc["body"] or "", scope)
+                q = reasons.stated_reason(text)
                 if q:
                     re_ = add(type="review_comment", ref=f"#{pr}", url=rc["url"], timestamp=None,
                               author=rc["author"], quote=q)
@@ -312,7 +341,9 @@ def _record(
                 ie = add(type="issue", ref=detail, url=irow["url"], timestamp=None, author=None,
                          quote=clean(irow["title"] or "", max_len=200))
                 sig_ids |= {s for s, _ in extract_text(f"{irow['title']}\n{irow['body']}")}
-                q = reasons.stated_reason(irow["body"] or "")
+                rel_issue = relevance.relevant_text(f"{irow['title']}\n\n{irow['body']}", scope)
+                rel_ids |= {s for s, _ in extract_text(rel_issue)}
+                q = reasons.stated_reason(relevance.relevant_text(irow["body"] or "", scope))
                 if q and not stated and sid == "text.closes_issue":
                     stated, stated_ev, grade = q, ie.id, "A"
             else:
@@ -328,16 +359,16 @@ def _record(
     if pr is not None:
         links.append(f"PR #{pr}")
 
-    # Commit message (grade B).
-    if not stated and (q := reasons.stated_reason(message, ctx_words)):
+    # Commit message (grade B), only the part that is about this code.
+    if not stated and (q := reasons.stated_reason(rel_message)):
         stated, stated_ev, grade = q, commit_ev.id, "B"
-    constraints += reasons.constraints(message)
-    alternatives += reasons.alternatives(message)
+    # A reason the change states for itself, not shown to be about this code.
+    change_reason = None if scope.focused else reasons.stated_reason(
+        relevance.change_level_text(message, scope))
+    constraints += reasons.constraints(rel_message)
+    alternatives += reasons.alternatives(rel_message)
 
     # Code: the owned lines plus comment lines directly above the first one.
-    owned = [bl.final_line for bl in bls]
-    spans = _ranges(owned)
-    code_lines = [lines[n - 1] for n in owned if n - 1 < len(lines)]
     above = []
     n = spans[0][0] - 1
     while n >= 1 and len(above) < 4 and reasons.comment_text(lines[n - 1]) is not None:
@@ -365,8 +396,8 @@ def _record(
             quote="reverted by " + r[:12] + " and later restored")
 
     # Tests added alongside.
-    test_paths = [c.path for c in ctx.store.changes_for(sha) if TEST_PATH.search(c.path)] \
-        if row else []
+    test_paths = relevance.related_tests(
+        [c.path for c in changes if TEST_PATH.search(c.path)], filename, scope)
     for tp in test_paths[:3]:
         add(type="test", ref=f"{tp}@{sha[:12]}", url=None, timestamp=None, author=None,
             quote=clean(tp, max_len=200))
@@ -396,16 +427,21 @@ def _record(
                 later.append(t.sha)
 
     # Type and grade C.
-    dtype = _decision_type(sig_ids, code_sigs, reverted is not None)
+    dtype = _decision_type(rel_ids, code_sigs, reverted is not None)
     inferred = None
-    # Grade C needs a history signal (message, label, revert). The code's shape alone
-    # (it has a lock) says what the code does, not why it was added.
-    history_types = {_TEXT_TYPE[s] for s in sig_ids if _TEXT_TYPE.get(s)}
+    # Grade C needs a history signal (message, label, revert) about this code. The
+    # code's shape alone (it has a lock) says what the code does, not why it was added.
+    history_types = {_TEXT_TYPE[s] for s in rel_ids if _TEXT_TYPE.get(s)}
     if reverted:
         history_types.add("revert")
-    if grade == "D" and dtype in history_types and dtype not in ("unknown", "cleanup"):
+    if grade == "D" and change_reason:
         grade = "C"
-        cues = [d for s, d in signals if _TEXT_TYPE.get(s) == dtype][:2]
+        inferred = (f"Inferred: added in a change to {scope.source_files} source files whose "
+                    f'message says "{change_reason}" No part of it names this code, so it '
+                    "may not be the reason these lines exist.")
+    elif grade == "D" and dtype in history_types and dtype not in ("unknown", "cleanup"):
+        grade = "C"
+        cues = [d for s, d in rel_signals if _TEXT_TYPE.get(s) == dtype][:2]
         cue = f" ({', '.join(repr(clean(c, max_len=40)) for c in cues)})" if cues else ""
         inferred = f"Inferred: looks like a {dtype} change{cue}; no reason is stated."
     elif grade == "D" and reverters:
@@ -415,9 +451,12 @@ def _record(
         inferred = "Inferred: was reverted and then restored; no reason is stated."
 
     later_count = _later_commits_to_file(ctx, history, row)
+    # Links count toward strength only when the text naming them is about this code.
+    rel_details = {d for s, d in rel_signals if s in LINK_SIGNALS}
+    rel_links = [x for x in links if x in rel_details or (x.startswith("PR #") and scope.focused)]
     inputs = StrengthInputs(
-        decision_type=dtype, grade=grade, links=links,
-        positive_text_signals=sorted(s for s in sig_ids
+        decision_type=dtype, grade=grade, links=rel_links,
+        positive_text_signals=sorted(s for s in rel_ids
                                      if s.startswith(("text.", "label.")) and _weight_positive(s)),
         code_signals=[(s, _CODE_WEIGHT[s]) for s in sorted({s for s, _ in code_sigs})],
         age_days=max(0.0, (_now(ctx, target.rev) - first.author_time) / 86400),
@@ -425,18 +464,20 @@ def _record(
         revert_involved=bool(reverted or reverters), test_added=bool(test_paths),
         distinct_authors=len(authors), bulk=bool(row and row.bulk),
         vendored=match_any(target.path, VENDORED),
-        automated="text.automated" in sig_ids, refactor="text.refactor" in sig_ids,
+        automated="text.automated" in rel_ids, refactor="text.refactor" in rel_ids,
         shallow=ctx.shallow or first.boundary, not_indexed=row is None,
         pr_unfetched=any(e.type == "pr" and e.retrieval_status == "not_fetched" for e in ev),
         offline=ctx.offline,
     )
     score = strength(inputs, ctx.cfg)
 
-    plugin = plugin_for(target.path)
     anchors = []
     for a, b in spans:
-        sym = enclosing_symbol(target.path, "\n".join(lines), a) if plugin else None
-        anchors.append(Anchor(target.path, a, b, sym.qualname if sym else None,
+        # Label a span with the innermost symbol that contains all of it; a span that
+        # crosses symbols belongs to the module, not to whichever symbol it starts in.
+        inside = [s for s in syms if s.start_line <= a and b <= s.end_line]
+        label = inside[-1].qualname if inside else MODULE
+        anchors.append(Anchor(target.path, a, b, label if plugin else None,
                               plugin.name if plugin else None, tuple(history)))
     status = "orphaned" if row and row.orphaned else "active"
     if deep and status == "active":
@@ -459,6 +500,8 @@ def _record(
         last_touched_at=first.author_time, authors=sorted(authors), status=status,
         strength=score, signals=sorted(set(signals) | {(s, d) for s, d in code_sigs}),
         later_touches=later, pr_number=pr,
+        reason_scope="code" if stated else ("change" if change_reason else None),
+        change_reason=change_reason,
         supersedes=[reverted] if reverted else [],
     )
 
