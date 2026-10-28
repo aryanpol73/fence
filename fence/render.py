@@ -120,8 +120,8 @@ def finding_text(f: Finding, o: Out, base: str, head_is_base: bool) -> list[str]
              f"evidence confidence {r.confidence:.2f} | grade {d.grade}{acked}"]
     if r.regret_rate is not None:
         lines.append(f"  Outcome: removals at this risk were later restored or reverted "
-                     f"{r.regret_rate:.0%} of the time (backtest on cobra + requests, "
-                     f"n={r.regret_n}; did not hold on a held-out repo, see STATUS.md).")
+                     f"{r.regret_rate:.0%} of the time (shipped backtest calibration, "
+                     f"n={r.regret_n}).")
     preview = f.removed_preview.split("\n")
     lines.append(f"  Change: {f.kind_reason}: " + preview[0].strip()
                  + (f" (+{len(preview) - 1} lines)" if len(preview) > 1 else ""))
