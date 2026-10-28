@@ -1,0 +1,1454 @@
+{
+  "repos": [
+    "axios",
+    "click",
+    "cobra",
+    "express",
+    "flask",
+    "gin",
+    "gson",
+    "koa",
+    "logrus",
+    "requests",
+    "viper"
+  ],
+  "pooled": {
+    "removal_blocks": 5674,
+    "regretted": 178,
+    "base_rate": {
+      "k": 178,
+      "n": 5674,
+      "rate": 0.0314,
+      "ci95": [
+        0.0271,
+        0.0362
+      ]
+    },
+    "warned_blocks": 1334,
+    "precision": {
+      "k": 47,
+      "n": 1334,
+      "rate": 0.0352,
+      "ci95": [
+        0.0266,
+        0.0465
+      ]
+    },
+    "recall": {
+      "k": 47,
+      "n": 178,
+      "rate": 0.264,
+      "ci95": [
+        0.2048,
+        0.3333
+      ]
+    },
+    "commits_evaluated": 5500,
+    "commits_warned": {
+      "k": 373,
+      "n": 5500,
+      "rate": 0.0678,
+      "ci95": [
+        0.0615,
+        0.0748
+      ]
+    },
+    "lift": 1.12,
+    "bands": {
+      "low": {
+        "k": 86,
+        "n": 2038,
+        "rate": 0.0422,
+        "ci95": [
+          0.0343,
+          0.0518
+        ]
+      },
+      "medium": {
+        "k": 74,
+        "n": 2892,
+        "rate": 0.0256,
+        "ci95": [
+          0.0204,
+          0.032
+        ]
+      },
+      "high": {
+        "k": 14,
+        "n": 638,
+        "rate": 0.0219,
+        "ci95": [
+          0.0131,
+          0.0365
+        ]
+      },
+      "critical": {
+        "k": 4,
+        "n": 106,
+        "rate": 0.0377,
+        "ci95": [
+          0.0148,
+          0.093
+        ]
+      }
+    }
+  },
+  "lift_ci95": [
+    0.47,
+    1.75
+  ],
+  "per_repo": {
+    "axios": {
+      "removal_blocks": 358,
+      "regretted": 30,
+      "base_rate": {
+        "k": 30,
+        "n": 358,
+        "rate": 0.0838,
+        "ci95": [
+          0.0593,
+          0.1171
+        ]
+      },
+      "warned_blocks": 110,
+      "precision": {
+        "k": 6,
+        "n": 110,
+        "rate": 0.0545,
+        "ci95": [
+          0.0252,
+          0.1139
+        ]
+      },
+      "recall": {
+        "k": 6,
+        "n": 30,
+        "rate": 0.2,
+        "ci95": [
+          0.0951,
+          0.3731
+        ]
+      },
+      "commits_evaluated": 500,
+      "commits_warned": {
+        "k": 49,
+        "n": 500,
+        "rate": 0.098,
+        "ci95": [
+          0.0749,
+          0.1272
+        ]
+      },
+      "lift": 0.65,
+      "bands": {
+        "low": {
+          "k": 15,
+          "n": 121,
+          "rate": 0.124,
+          "ci95": [
+            0.0766,
+            0.1945
+          ]
+        },
+        "medium": {
+          "k": 9,
+          "n": 161,
+          "rate": 0.0559,
+          "ci95": [
+            0.0297,
+            0.1028
+          ]
+        },
+        "high": {
+          "k": 6,
+          "n": 76,
+          "rate": 0.0789,
+          "ci95": [
+            0.0367,
+            0.1617
+          ]
+        },
+        "critical": {
+          "k": 0,
+          "n": 0,
+          "rate": null,
+          "ci95": null
+        }
+      }
+    },
+    "click": {
+      "removal_blocks": 714,
+      "regretted": 16,
+      "base_rate": {
+        "k": 16,
+        "n": 714,
+        "rate": 0.0224,
+        "ci95": [
+          0.0138,
+          0.0361
+        ]
+      },
+      "warned_blocks": 122,
+      "precision": {
+        "k": 1,
+        "n": 122,
+        "rate": 0.0082,
+        "ci95": [
+          0.0014,
+          0.045
+        ]
+      },
+      "recall": {
+        "k": 1,
+        "n": 16,
+        "rate": 0.0625,
+        "ci95": [
+          0.0111,
+          0.2833
+        ]
+      },
+      "commits_evaluated": 500,
+      "commits_warned": {
+        "k": 40,
+        "n": 500,
+        "rate": 0.08,
+        "ci95": [
+          0.0593,
+          0.1071
+        ]
+      },
+      "lift": 0.37,
+      "bands": {
+        "low": {
+          "k": 7,
+          "n": 260,
+          "rate": 0.0269,
+          "ci95": [
+            0.0131,
+            0.0545
+          ]
+        },
+        "medium": {
+          "k": 8,
+          "n": 410,
+          "rate": 0.0195,
+          "ci95": [
+            0.0099,
+            0.038
+          ]
+        },
+        "high": {
+          "k": 1,
+          "n": 43,
+          "rate": 0.0233,
+          "ci95": [
+            0.0041,
+            0.1206
+          ]
+        },
+        "critical": {
+          "k": 0,
+          "n": 1,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.7935
+          ]
+        }
+      }
+    },
+    "cobra": {
+      "removal_blocks": 720,
+      "regretted": 23,
+      "base_rate": {
+        "k": 23,
+        "n": 720,
+        "rate": 0.0319,
+        "ci95": [
+          0.0214,
+          0.0475
+        ]
+      },
+      "warned_blocks": 110,
+      "precision": {
+        "k": 10,
+        "n": 110,
+        "rate": 0.0909,
+        "ci95": [
+          0.0501,
+          0.1593
+        ]
+      },
+      "recall": {
+        "k": 10,
+        "n": 23,
+        "rate": 0.4348,
+        "ci95": [
+          0.2563,
+          0.6319
+        ]
+      },
+      "commits_evaluated": 500,
+      "commits_warned": {
+        "k": 31,
+        "n": 500,
+        "rate": 0.062,
+        "ci95": [
+          0.044,
+          0.0867
+        ]
+      },
+      "lift": 2.85,
+      "bands": {
+        "low": {
+          "k": 7,
+          "n": 385,
+          "rate": 0.0182,
+          "ci95": [
+            0.0088,
+            0.037
+          ]
+        },
+        "medium": {
+          "k": 12,
+          "n": 269,
+          "rate": 0.0446,
+          "ci95": [
+            0.0257,
+            0.0763
+          ]
+        },
+        "high": {
+          "k": 4,
+          "n": 62,
+          "rate": 0.0645,
+          "ci95": [
+            0.0254,
+            0.1545
+          ]
+        },
+        "critical": {
+          "k": 0,
+          "n": 4,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.4899
+          ]
+        }
+      }
+    },
+    "express": {
+      "removal_blocks": 564,
+      "regretted": 10,
+      "base_rate": {
+        "k": 10,
+        "n": 564,
+        "rate": 0.0177,
+        "ci95": [
+          0.0097,
+          0.0323
+        ]
+      },
+      "warned_blocks": 121,
+      "precision": {
+        "k": 2,
+        "n": 121,
+        "rate": 0.0165,
+        "ci95": [
+          0.0045,
+          0.0583
+        ]
+      },
+      "recall": {
+        "k": 2,
+        "n": 10,
+        "rate": 0.2,
+        "ci95": [
+          0.0567,
+          0.5098
+        ]
+      },
+      "commits_evaluated": 500,
+      "commits_warned": {
+        "k": 37,
+        "n": 500,
+        "rate": 0.074,
+        "ci95": [
+          0.0542,
+          0.1003
+        ]
+      },
+      "lift": 0.93,
+      "bands": {
+        "low": {
+          "k": 5,
+          "n": 243,
+          "rate": 0.0206,
+          "ci95": [
+            0.0088,
+            0.0473
+          ]
+        },
+        "medium": {
+          "k": 4,
+          "n": 282,
+          "rate": 0.0142,
+          "ci95": [
+            0.0055,
+            0.0359
+          ]
+        },
+        "high": {
+          "k": 1,
+          "n": 36,
+          "rate": 0.0278,
+          "ci95": [
+            0.0049,
+            0.1417
+          ]
+        },
+        "critical": {
+          "k": 0,
+          "n": 3,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.5615
+          ]
+        }
+      }
+    },
+    "flask": {
+      "removal_blocks": 930,
+      "regretted": 25,
+      "base_rate": {
+        "k": 25,
+        "n": 930,
+        "rate": 0.0269,
+        "ci95": [
+          0.0183,
+          0.0394
+        ]
+      },
+      "warned_blocks": 173,
+      "precision": {
+        "k": 1,
+        "n": 173,
+        "rate": 0.0058,
+        "ci95": [
+          0.001,
+          0.032
+        ]
+      },
+      "recall": {
+        "k": 1,
+        "n": 25,
+        "rate": 0.04,
+        "ci95": [
+          0.0071,
+          0.1954
+        ]
+      },
+      "commits_evaluated": 500,
+      "commits_warned": {
+        "k": 38,
+        "n": 500,
+        "rate": 0.076,
+        "ci95": [
+          0.0559,
+          0.1026
+        ]
+      },
+      "lift": 0.22,
+      "bands": {
+        "low": {
+          "k": 21,
+          "n": 319,
+          "rate": 0.0658,
+          "ci95": [
+            0.0435,
+            0.0985
+          ]
+        },
+        "medium": {
+          "k": 4,
+          "n": 519,
+          "rate": 0.0077,
+          "ci95": [
+            0.003,
+            0.0196
+          ]
+        },
+        "high": {
+          "k": 0,
+          "n": 91,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.0405
+          ]
+        },
+        "critical": {
+          "k": 0,
+          "n": 1,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.7935
+          ]
+        }
+      }
+    },
+    "gin": {
+      "removal_blocks": 436,
+      "regretted": 6,
+      "base_rate": {
+        "k": 6,
+        "n": 436,
+        "rate": 0.0138,
+        "ci95": [
+          0.0063,
+          0.0297
+        ]
+      },
+      "warned_blocks": 120,
+      "precision": {
+        "k": 2,
+        "n": 120,
+        "rate": 0.0167,
+        "ci95": [
+          0.0046,
+          0.0587
+        ]
+      },
+      "recall": {
+        "k": 2,
+        "n": 6,
+        "rate": 0.3333,
+        "ci95": [
+          0.0968,
+          0.7
+        ]
+      },
+      "commits_evaluated": 500,
+      "commits_warned": {
+        "k": 37,
+        "n": 500,
+        "rate": 0.074,
+        "ci95": [
+          0.0542,
+          0.1003
+        ]
+      },
+      "lift": 1.21,
+      "bands": {
+        "low": {
+          "k": 2,
+          "n": 118,
+          "rate": 0.0169,
+          "ci95": [
+            0.0047,
+            0.0597
+          ]
+        },
+        "medium": {
+          "k": 2,
+          "n": 251,
+          "rate": 0.008,
+          "ci95": [
+            0.0022,
+            0.0286
+          ]
+        },
+        "high": {
+          "k": 0,
+          "n": 52,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.0688
+          ]
+        },
+        "critical": {
+          "k": 2,
+          "n": 15,
+          "rate": 0.1333,
+          "ci95": [
+            0.0374,
+            0.3788
+          ]
+        }
+      }
+    },
+    "gson": {
+      "removal_blocks": 831,
+      "regretted": 5,
+      "base_rate": {
+        "k": 5,
+        "n": 831,
+        "rate": 0.006,
+        "ci95": [
+          0.0026,
+          0.014
+        ]
+      },
+      "warned_blocks": 271,
+      "precision": {
+        "k": 0,
+        "n": 271,
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.014
+        ]
+      },
+      "recall": {
+        "k": 0,
+        "n": 5,
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.4345
+        ]
+      },
+      "commits_evaluated": 500,
+      "commits_warned": {
+        "k": 60,
+        "n": 500,
+        "rate": 0.12,
+        "ci95": [
+          0.0944,
+          0.1514
+        ]
+      },
+      "lift": null,
+      "bands": {
+        "low": {
+          "k": 2,
+          "n": 186,
+          "rate": 0.0108,
+          "ci95": [
+            0.003,
+            0.0384
+          ]
+        },
+        "medium": {
+          "k": 3,
+          "n": 471,
+          "rate": 0.0064,
+          "ci95": [
+            0.0022,
+            0.0186
+          ]
+        },
+        "high": {
+          "k": 0,
+          "n": 143,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.0262
+          ]
+        },
+        "critical": {
+          "k": 0,
+          "n": 31,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.1103
+          ]
+        }
+      }
+    },
+    "koa": {
+      "removal_blocks": 198,
+      "regretted": 3,
+      "base_rate": {
+        "k": 3,
+        "n": 198,
+        "rate": 0.0152,
+        "ci95": [
+          0.0052,
+          0.0436
+        ]
+      },
+      "warned_blocks": 16,
+      "precision": {
+        "k": 0,
+        "n": 16,
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.1936
+        ]
+      },
+      "recall": {
+        "k": 0,
+        "n": 3,
+        "rate": 0.0,
+        "ci95": [
+          0.0,
+          0.5615
+        ]
+      },
+      "commits_evaluated": 500,
+      "commits_warned": {
+        "k": 10,
+        "n": 500,
+        "rate": 0.02,
+        "ci95": [
+          0.0109,
+          0.0364
+        ]
+      },
+      "lift": null,
+      "bands": {
+        "low": {
+          "k": 0,
+          "n": 72,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.0507
+          ]
+        },
+        "medium": {
+          "k": 3,
+          "n": 120,
+          "rate": 0.025,
+          "ci95": [
+            0.0085,
+            0.0709
+          ]
+        },
+        "high": {
+          "k": 0,
+          "n": 6,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.3903
+          ]
+        },
+        "critical": {
+          "k": 0,
+          "n": 0,
+          "rate": null,
+          "ci95": null
+        }
+      }
+    },
+    "logrus": {
+      "removal_blocks": 479,
+      "regretted": 37,
+      "base_rate": {
+        "k": 37,
+        "n": 479,
+        "rate": 0.0772,
+        "ci95": [
+          0.0566,
+          0.1047
+        ]
+      },
+      "warned_blocks": 151,
+      "precision": {
+        "k": 21,
+        "n": 151,
+        "rate": 0.1391,
+        "ci95": [
+          0.0928,
+          0.2033
+        ]
+      },
+      "recall": {
+        "k": 21,
+        "n": 37,
+        "rate": 0.5676,
+        "ci95": [
+          0.4091,
+          0.7133
+        ]
+      },
+      "commits_evaluated": 500,
+      "commits_warned": {
+        "k": 25,
+        "n": 500,
+        "rate": 0.05,
+        "ci95": [
+          0.0341,
+          0.0728
+        ]
+      },
+      "lift": 1.8,
+      "bands": {
+        "low": {
+          "k": 13,
+          "n": 176,
+          "rate": 0.0739,
+          "ci95": [
+            0.0437,
+            0.1223
+          ]
+        },
+        "medium": {
+          "k": 24,
+          "n": 222,
+          "rate": 0.1081,
+          "ci95": [
+            0.0737,
+            0.1558
+          ]
+        },
+        "high": {
+          "k": 0,
+          "n": 62,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.0583
+          ]
+        },
+        "critical": {
+          "k": 0,
+          "n": 19,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.1682
+          ]
+        }
+      }
+    },
+    "requests": {
+      "removal_blocks": 114,
+      "regretted": 4,
+      "base_rate": {
+        "k": 4,
+        "n": 114,
+        "rate": 0.0351,
+        "ci95": [
+          0.0137,
+          0.0868
+        ]
+      },
+      "warned_blocks": 18,
+      "precision": {
+        "k": 1,
+        "n": 18,
+        "rate": 0.0556,
+        "ci95": [
+          0.0099,
+          0.2576
+        ]
+      },
+      "recall": {
+        "k": 1,
+        "n": 4,
+        "rate": 0.25,
+        "ci95": [
+          0.0456,
+          0.6994
+        ]
+      },
+      "commits_evaluated": 500,
+      "commits_warned": {
+        "k": 8,
+        "n": 500,
+        "rate": 0.016,
+        "ci95": [
+          0.0081,
+          0.0313
+        ]
+      },
+      "lift": 1.58,
+      "bands": {
+        "low": {
+          "k": 3,
+          "n": 49,
+          "rate": 0.0612,
+          "ci95": [
+            0.021,
+            0.1652
+          ]
+        },
+        "medium": {
+          "k": 0,
+          "n": 54,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.0664
+          ]
+        },
+        "high": {
+          "k": 1,
+          "n": 9,
+          "rate": 0.1111,
+          "ci95": [
+            0.0199,
+            0.435
+          ]
+        },
+        "critical": {
+          "k": 0,
+          "n": 2,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.6576
+          ]
+        }
+      }
+    },
+    "viper": {
+      "removal_blocks": 330,
+      "regretted": 19,
+      "base_rate": {
+        "k": 19,
+        "n": 330,
+        "rate": 0.0576,
+        "ci95": [
+          0.0372,
+          0.0882
+        ]
+      },
+      "warned_blocks": 122,
+      "precision": {
+        "k": 3,
+        "n": 122,
+        "rate": 0.0246,
+        "ci95": [
+          0.0084,
+          0.0698
+        ]
+      },
+      "recall": {
+        "k": 3,
+        "n": 19,
+        "rate": 0.1579,
+        "ci95": [
+          0.0552,
+          0.3757
+        ]
+      },
+      "commits_evaluated": 500,
+      "commits_warned": {
+        "k": 38,
+        "n": 500,
+        "rate": 0.076,
+        "ci95": [
+          0.0559,
+          0.1026
+        ]
+      },
+      "lift": 0.43,
+      "bands": {
+        "low": {
+          "k": 11,
+          "n": 109,
+          "rate": 0.1009,
+          "ci95": [
+            0.0573,
+            0.1717
+          ]
+        },
+        "medium": {
+          "k": 5,
+          "n": 133,
+          "rate": 0.0376,
+          "ci95": [
+            0.0162,
+            0.085
+          ]
+        },
+        "high": {
+          "k": 1,
+          "n": 58,
+          "rate": 0.0172,
+          "ci95": [
+            0.0031,
+            0.0914
+          ]
+        },
+        "critical": {
+          "k": 2,
+          "n": 30,
+          "rate": 0.0667,
+          "ci95": [
+            0.0185,
+            0.2132
+          ]
+        }
+      }
+    }
+  },
+  "loo": [
+    {
+      "repo": "axios",
+      "blocks": 358,
+      "regretted": 30,
+      "bins": [
+        {
+          "risk": "0-55",
+          "fit_rate": 0.0256,
+          "k": 24,
+          "n": 264,
+          "rate": 0.0909,
+          "ci95": [
+            0.0619,
+            0.1317
+          ]
+        },
+        {
+          "risk": "56-89",
+          "fit_rate": 0.0379,
+          "k": 6,
+          "n": 94,
+          "rate": 0.0638,
+          "ci95": [
+            0.0296,
+            0.1323
+          ]
+        },
+        {
+          "risk": "90-100",
+          "fit_rate": 0.0606,
+          "k": 0,
+          "n": 0,
+          "rate": null,
+          "ci95": null
+        }
+      ],
+      "monotonic_nondecreasing": false,
+      "monotonic_strict": false,
+      "top_bin_above_bottom": false,
+      "lift": 0.65
+    },
+    {
+      "repo": "click",
+      "blocks": 714,
+      "regretted": 16,
+      "bins": [
+        {
+          "risk": "0-55",
+          "fit_rate": 0.0301,
+          "k": 15,
+          "n": 641,
+          "rate": 0.0234,
+          "ci95": [
+            0.0142,
+            0.0382
+          ]
+        },
+        {
+          "risk": "56-89",
+          "fit_rate": 0.0431,
+          "k": 1,
+          "n": 72,
+          "rate": 0.0139,
+          "ci95": [
+            0.0025,
+            0.0746
+          ]
+        },
+        {
+          "risk": "90-100",
+          "fit_rate": 0.0615,
+          "k": 0,
+          "n": 1,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.7935
+          ]
+        }
+      ],
+      "monotonic_nondecreasing": false,
+      "monotonic_strict": false,
+      "top_bin_above_bottom": false,
+      "lift": 0.37
+    },
+    {
+      "repo": "cobra",
+      "blocks": 720,
+      "regretted": 23,
+      "bins": [
+        {
+          "risk": "0-55",
+          "fit_rate": 0.0297,
+          "k": 17,
+          "n": 643,
+          "rate": 0.0264,
+          "ci95": [
+            0.0166,
+            0.0419
+          ]
+        },
+        {
+          "risk": "56-89",
+          "fit_rate": 0.0371,
+          "k": 6,
+          "n": 77,
+          "rate": 0.0779,
+          "ci95": [
+            0.0362,
+            0.1598
+          ]
+        },
+        {
+          "risk": "90-100",
+          "fit_rate": 0.0606,
+          "k": 0,
+          "n": 0,
+          "rate": null,
+          "ci95": null
+        }
+      ],
+      "monotonic_nondecreasing": true,
+      "monotonic_strict": true,
+      "top_bin_above_bottom": true,
+      "lift": 2.85
+    },
+    {
+      "repo": "express",
+      "blocks": 564,
+      "regretted": 10,
+      "bins": [
+        {
+          "risk": "0-55",
+          "fit_rate": 0.0306,
+          "k": 9,
+          "n": 507,
+          "rate": 0.0178,
+          "ci95": [
+            0.0094,
+            0.0334
+          ]
+        },
+        {
+          "risk": "56-89",
+          "fit_rate": 0.0421,
+          "k": 1,
+          "n": 54,
+          "rate": 0.0185,
+          "ci95": [
+            0.0033,
+            0.0977
+          ]
+        },
+        {
+          "risk": "90-100",
+          "fit_rate": 0.0635,
+          "k": 0,
+          "n": 3,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.5615
+          ]
+        }
+      ],
+      "monotonic_nondecreasing": false,
+      "monotonic_strict": false,
+      "top_bin_above_bottom": false,
+      "lift": 0.93
+    },
+    {
+      "repo": "flask",
+      "blocks": 930,
+      "regretted": 25,
+      "bins": [
+        {
+          "risk": "0-47",
+          "fit_rate": 0.0292,
+          "k": 24,
+          "n": 733,
+          "rate": 0.0327,
+          "ci95": [
+            0.0221,
+            0.0483
+          ]
+        },
+        {
+          "risk": "48-55",
+          "fit_rate": 0.0302,
+          "k": 0,
+          "n": 94,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.0393
+          ]
+        },
+        {
+          "risk": "56-89",
+          "fit_rate": 0.0448,
+          "k": 1,
+          "n": 103,
+          "rate": 0.0097,
+          "ci95": [
+            0.0017,
+            0.053
+          ]
+        },
+        {
+          "risk": "90-100",
+          "fit_rate": 0.0606,
+          "k": 0,
+          "n": 0,
+          "rate": null,
+          "ci95": null
+        }
+      ],
+      "monotonic_nondecreasing": false,
+      "monotonic_strict": false,
+      "top_bin_above_bottom": false,
+      "lift": 0.22
+    },
+    {
+      "repo": "gin",
+      "blocks": 436,
+      "regretted": 6,
+      "bins": [
+        {
+          "risk": "0-55",
+          "fit_rate": 0.0306,
+          "k": 4,
+          "n": 340,
+          "rate": 0.0118,
+          "ci95": [
+            0.0046,
+            0.0299
+          ]
+        },
+        {
+          "risk": "56-100",
+          "fit_rate": 0.0444,
+          "k": 2,
+          "n": 96,
+          "rate": 0.0208,
+          "ci95": [
+            0.0057,
+            0.0728
+          ]
+        }
+      ],
+      "monotonic_nondecreasing": true,
+      "monotonic_strict": true,
+      "top_bin_above_bottom": true,
+      "lift": 1.21
+    },
+    {
+      "repo": "gson",
+      "blocks": 831,
+      "regretted": 5,
+      "bins": [
+        {
+          "risk": "0-55",
+          "fit_rate": 0.0324,
+          "k": 5,
+          "n": 621,
+          "rate": 0.0081,
+          "ci95": [
+            0.0034,
+            0.0187
+          ]
+        },
+        {
+          "risk": "56-89",
+          "fit_rate": 0.0516,
+          "k": 0,
+          "n": 187,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.0201
+          ]
+        },
+        {
+          "risk": "90-100",
+          "fit_rate": 0.093,
+          "k": 0,
+          "n": 23,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.1431
+          ]
+        }
+      ],
+      "monotonic_nondecreasing": false,
+      "monotonic_strict": false,
+      "top_bin_above_bottom": false,
+      "lift": 0.0
+    },
+    {
+      "repo": "koa",
+      "blocks": 198,
+      "regretted": 3,
+      "bins": [
+        {
+          "risk": "0-56",
+          "fit_rate": 0.0298,
+          "k": 3,
+          "n": 188,
+          "rate": 0.016,
+          "ci95": [
+            0.0054,
+            0.0459
+          ]
+        },
+        {
+          "risk": "57-89",
+          "fit_rate": 0.0416,
+          "k": 0,
+          "n": 10,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.2775
+          ]
+        },
+        {
+          "risk": "90-100",
+          "fit_rate": 0.0606,
+          "k": 0,
+          "n": 0,
+          "rate": null,
+          "ci95": null
+        }
+      ],
+      "monotonic_nondecreasing": false,
+      "monotonic_strict": false,
+      "top_bin_above_bottom": false,
+      "lift": 0.0
+    },
+    {
+      "repo": "logrus",
+      "blocks": 479,
+      "regretted": 37,
+      "bins": [
+        {
+          "risk": "0-89",
+          "fit_rate": 0.0267,
+          "k": 37,
+          "n": 479,
+          "rate": 0.0772,
+          "ci95": [
+            0.0566,
+            0.1047
+          ]
+        },
+        {
+          "risk": "90-100",
+          "fit_rate": 0.0606,
+          "k": 0,
+          "n": 0,
+          "rate": null,
+          "ci95": null
+        }
+      ],
+      "monotonic_nondecreasing": null,
+      "monotonic_strict": null,
+      "top_bin_above_bottom": null,
+      "lift": 1.8
+    },
+    {
+      "repo": "requests",
+      "blocks": 114,
+      "regretted": 4,
+      "bins": [
+        {
+          "risk": "0-55",
+          "fit_rate": 0.0292,
+          "k": 3,
+          "n": 101,
+          "rate": 0.0297,
+          "ci95": [
+            0.0102,
+            0.0837
+          ]
+        },
+        {
+          "risk": "56-89",
+          "fit_rate": 0.04,
+          "k": 1,
+          "n": 11,
+          "rate": 0.0909,
+          "ci95": [
+            0.0162,
+            0.3774
+          ]
+        },
+        {
+          "risk": "90-100",
+          "fit_rate": 0.0625,
+          "k": 0,
+          "n": 2,
+          "rate": 0.0,
+          "ci95": [
+            0.0,
+            0.6576
+          ]
+        }
+      ],
+      "monotonic_nondecreasing": false,
+      "monotonic_strict": false,
+      "top_bin_above_bottom": false,
+      "lift": 1.58
+    },
+    {
+      "repo": "viper",
+      "blocks": 330,
+      "regretted": 19,
+      "bins": [
+        {
+          "risk": "0-5",
+          "fit_rate": 0.0158,
+          "k": 5,
+          "n": 8,
+          "rate": 0.625,
+          "ci95": [
+            0.3057,
+            0.8632
+          ]
+        },
+        {
+          "risk": "6-55",
+          "fit_rate": 0.0277,
+          "k": 11,
+          "n": 229,
+          "rate": 0.048,
+          "ci95": [
+            0.027,
+            0.084
+          ]
+        },
+        {
+          "risk": "56-100",
+          "fit_rate": 0.0431,
+          "k": 3,
+          "n": 93,
+          "rate": 0.0323,
+          "ci95": [
+            0.011,
+            0.0906
+          ]
+        }
+      ],
+      "monotonic_nondecreasing": false,
+      "monotonic_strict": false,
+      "top_bin_above_bottom": false,
+      "lift": 0.43
+    }
+  ],
+  "loo_summary": {
+    "repos_with_bins": 10,
+    "top_above_bottom": 2,
+    "nondecreasing": 2,
+    "repos_with_lift": 11,
+    "lift_above_1": 4
+  }
+}

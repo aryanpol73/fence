@@ -1,0 +1,48 @@
+{
+  "repo": "gin",
+  "commits_evaluated": 500,
+  "removal_blocks": 436,
+  "regretted_blocks": 6,
+  "warned_blocks": 120,
+  "keep_blocks": 55,
+  "precision_warn": 0.017,
+  "recall_warn": 0.333,
+  "precision_keep": 0.036,
+  "recall_keep": 0.333,
+  "warned_commits_per_1k": 74.0,
+  "warning_blocks_per_1k_commits": 240.0,
+  "median_check_seconds": 0.945,
+  "p90_check_seconds": 2.704,
+  "median_lead_days": 423.7,
+  "calibration": [
+    {
+      "risk": "0-29",
+      "table_rate": 0.0198,
+      "blocks": 180,
+      "regretted": 2,
+      "observed_rate": 0.011
+    },
+    {
+      "risk": "30-50",
+      "table_rate": 0.0327,
+      "blocks": 137,
+      "regretted": 2,
+      "observed_rate": 0.015
+    },
+    {
+      "risk": "51-100",
+      "table_rate": 0.088,
+      "blocks": 119,
+      "regretted": 2,
+      "observed_rate": 0.017
+    }
+  ],
+  "calibration_monotonic": true,
+  "errors": 0,
+  "seconds": 185.1,
+  "url": "https://github.com/gin-gonic/gin.git",
+  "language": "go",
+  "sha": "0f09c3a9b4626d9fe9979cf4d0521d6ae32ab646",
+  "max_commits": 500,
+  "window": 300
+}

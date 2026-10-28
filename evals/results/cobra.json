@@ -1,0 +1,48 @@
+{
+  "repo": "cobra",
+  "commits_evaluated": 500,
+  "removal_blocks": 720,
+  "regretted_blocks": 23,
+  "warned_blocks": 110,
+  "keep_blocks": 20,
+  "precision_warn": 0.091,
+  "recall_warn": 0.435,
+  "precision_keep": 0.05,
+  "recall_keep": 0.043,
+  "warned_commits_per_1k": 62.0,
+  "warning_blocks_per_1k_commits": 220.0,
+  "median_check_seconds": 0.789,
+  "p90_check_seconds": 2.016,
+  "median_lead_days": 6.5,
+  "calibration": [
+    {
+      "risk": "0-29",
+      "table_rate": 0.0198,
+      "blocks": 497,
+      "regretted": 8,
+      "observed_rate": 0.016
+    },
+    {
+      "risk": "30-50",
+      "table_rate": 0.0327,
+      "blocks": 116,
+      "regretted": 5,
+      "observed_rate": 0.043
+    },
+    {
+      "risk": "51-100",
+      "table_rate": 0.088,
+      "blocks": 107,
+      "regretted": 10,
+      "observed_rate": 0.093
+    }
+  ],
+  "calibration_monotonic": true,
+  "errors": 0,
+  "seconds": 185.0,
+  "url": "https://github.com/spf13/cobra.git",
+  "language": "go",
+  "sha": "adbc8813901bba65827259daa8e22ff94ec1f30e",
+  "max_commits": 500,
+  "window": 300
+}

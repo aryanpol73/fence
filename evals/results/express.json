@@ -1,0 +1,48 @@
+{
+  "repo": "express",
+  "commits_evaluated": 500,
+  "removal_blocks": 564,
+  "regretted_blocks": 10,
+  "warned_blocks": 121,
+  "keep_blocks": 28,
+  "precision_warn": 0.017,
+  "recall_warn": 0.2,
+  "precision_keep": 0.036,
+  "recall_keep": 0.1,
+  "warned_commits_per_1k": 74.0,
+  "warning_blocks_per_1k_commits": 242.0,
+  "median_check_seconds": 1.078,
+  "p90_check_seconds": 3.454,
+  "median_lead_days": 208.0,
+  "calibration": [
+    {
+      "risk": "0-29",
+      "table_rate": 0.0198,
+      "blocks": 295,
+      "regretted": 5,
+      "observed_rate": 0.017
+    },
+    {
+      "risk": "30-50",
+      "table_rate": 0.0327,
+      "blocks": 163,
+      "regretted": 3,
+      "observed_rate": 0.018
+    },
+    {
+      "risk": "51-100",
+      "table_rate": 0.088,
+      "blocks": 106,
+      "regretted": 2,
+      "observed_rate": 0.019
+    }
+  ],
+  "calibration_monotonic": true,
+  "errors": 0,
+  "seconds": 273.2,
+  "url": "https://github.com/expressjs/express.git",
+  "language": "javascript",
+  "sha": "1c6f1b0fe4000977b9a7b4f34097e4d527dd9824",
+  "max_commits": 500,
+  "window": 300
+}

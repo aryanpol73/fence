@@ -1,0 +1,48 @@
+{
+  "repo": "koa",
+  "commits_evaluated": 500,
+  "removal_blocks": 198,
+  "regretted_blocks": 3,
+  "warned_blocks": 16,
+  "keep_blocks": 3,
+  "precision_warn": 0.0,
+  "recall_warn": 0.0,
+  "precision_keep": 0.0,
+  "recall_keep": 0.0,
+  "warned_commits_per_1k": 20.0,
+  "warning_blocks_per_1k_commits": 32.0,
+  "median_check_seconds": 0.719,
+  "p90_check_seconds": 2.187,
+  "median_lead_days": null,
+  "calibration": [
+    {
+      "risk": "0-29",
+      "table_rate": 0.0198,
+      "blocks": 104,
+      "regretted": 1,
+      "observed_rate": 0.01
+    },
+    {
+      "risk": "30-50",
+      "table_rate": 0.0327,
+      "blocks": 75,
+      "regretted": 1,
+      "observed_rate": 0.013
+    },
+    {
+      "risk": "51-100",
+      "table_rate": 0.088,
+      "blocks": 19,
+      "regretted": 1,
+      "observed_rate": 0.053
+    }
+  ],
+  "calibration_monotonic": true,
+  "errors": 0,
+  "seconds": 140.8,
+  "url": "https://github.com/koajs/koa.git",
+  "language": "javascript",
+  "sha": "b786e7b456782c2cff1d6549cd4c8dba3feeb262",
+  "max_commits": 500,
+  "window": 300
+}

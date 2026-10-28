@@ -1,0 +1,48 @@
+{
+  "repo": "gson",
+  "commits_evaluated": 500,
+  "removal_blocks": 831,
+  "regretted_blocks": 5,
+  "warned_blocks": 271,
+  "keep_blocks": 117,
+  "precision_warn": 0.0,
+  "recall_warn": 0.0,
+  "precision_keep": 0.0,
+  "recall_keep": 0.0,
+  "warned_commits_per_1k": 120.0,
+  "warning_blocks_per_1k_commits": 542.0,
+  "median_check_seconds": 1.5,
+  "p90_check_seconds": 6.015,
+  "median_lead_days": null,
+  "calibration": [
+    {
+      "risk": "0-29",
+      "table_rate": 0.0198,
+      "blocks": 253,
+      "regretted": 5,
+      "observed_rate": 0.02
+    },
+    {
+      "risk": "30-50",
+      "table_rate": 0.0327,
+      "blocks": 331,
+      "regretted": 0,
+      "observed_rate": 0.0
+    },
+    {
+      "risk": "51-100",
+      "table_rate": 0.088,
+      "blocks": 247,
+      "regretted": 0,
+      "observed_rate": 0.0
+    }
+  ],
+  "calibration_monotonic": false,
+  "errors": 0,
+  "seconds": 370.8,
+  "url": "https://github.com/google/gson.git",
+  "language": "java",
+  "sha": "57731049da3e415be3d5d34db1ca3b80f3c73810",
+  "max_commits": 500,
+  "window": 300
+}

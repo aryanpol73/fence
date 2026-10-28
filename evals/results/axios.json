@@ -1,0 +1,48 @@
+{
+  "repo": "axios",
+  "commits_evaluated": 500,
+  "removal_blocks": 358,
+  "regretted_blocks": 30,
+  "warned_blocks": 110,
+  "keep_blocks": 47,
+  "precision_warn": 0.055,
+  "recall_warn": 0.2,
+  "precision_keep": 0.064,
+  "recall_keep": 0.1,
+  "warned_commits_per_1k": 98.0,
+  "warning_blocks_per_1k_commits": 220.0,
+  "median_check_seconds": 1.141,
+  "p90_check_seconds": 5.094,
+  "median_lead_days": 14.9,
+  "calibration": [
+    {
+      "risk": "0-29",
+      "table_rate": 0.0198,
+      "blocks": 151,
+      "regretted": 16,
+      "observed_rate": 0.106
+    },
+    {
+      "risk": "30-50",
+      "table_rate": 0.0327,
+      "blocks": 99,
+      "regretted": 8,
+      "observed_rate": 0.081
+    },
+    {
+      "risk": "51-100",
+      "table_rate": 0.088,
+      "blocks": 108,
+      "regretted": 6,
+      "observed_rate": 0.056
+    }
+  ],
+  "calibration_monotonic": false,
+  "errors": 0,
+  "seconds": 333.3,
+  "url": "https://github.com/axios/axios.git",
+  "language": "javascript",
+  "sha": "9d11464a75ee5c644c0308d742f58755c0482594",
+  "max_commits": 500,
+  "window": 300
+}

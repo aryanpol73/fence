@@ -1,0 +1,48 @@
+{
+  "repo": "requests",
+  "commits_evaluated": 500,
+  "removal_blocks": 114,
+  "regretted_blocks": 4,
+  "warned_blocks": 18,
+  "keep_blocks": 10,
+  "precision_warn": 0.056,
+  "recall_warn": 0.25,
+  "precision_keep": 0.1,
+  "recall_keep": 0.25,
+  "warned_commits_per_1k": 16.0,
+  "warning_blocks_per_1k_commits": 36.0,
+  "median_check_seconds": 0.953,
+  "p90_check_seconds": 3.922,
+  "median_lead_days": 182.9,
+  "calibration": [
+    {
+      "risk": "0-29",
+      "table_rate": 0.0198,
+      "blocks": 59,
+      "regretted": 3,
+      "observed_rate": 0.051
+    },
+    {
+      "risk": "30-50",
+      "table_rate": 0.0327,
+      "blocks": 37,
+      "regretted": 0,
+      "observed_rate": 0.0
+    },
+    {
+      "risk": "51-100",
+      "table_rate": 0.088,
+      "blocks": 18,
+      "regretted": 1,
+      "observed_rate": 0.056
+    }
+  ],
+  "calibration_monotonic": false,
+  "errors": 0,
+  "seconds": 101.6,
+  "url": "https://github.com/psf/requests.git",
+  "language": "python",
+  "sha": "3c7baaa05ab4aa49cc819ce3a819d260de19c157",
+  "max_commits": 500,
+  "window": 300
+}

@@ -1,0 +1,48 @@
+{
+  "repo": "viper",
+  "commits_evaluated": 500,
+  "removal_blocks": 330,
+  "regretted_blocks": 19,
+  "warned_blocks": 122,
+  "keep_blocks": 69,
+  "precision_warn": 0.025,
+  "recall_warn": 0.158,
+  "precision_keep": 0.043,
+  "recall_keep": 0.158,
+  "warned_commits_per_1k": 76.0,
+  "warning_blocks_per_1k_commits": 244.0,
+  "median_check_seconds": 0.899,
+  "p90_check_seconds": 3.125,
+  "median_lead_days": 3.9,
+  "calibration": [
+    {
+      "risk": "0-29",
+      "table_rate": 0.0198,
+      "blocks": 141,
+      "regretted": 11,
+      "observed_rate": 0.078
+    },
+    {
+      "risk": "30-50",
+      "table_rate": 0.0327,
+      "blocks": 74,
+      "regretted": 5,
+      "observed_rate": 0.068
+    },
+    {
+      "risk": "51-100",
+      "table_rate": 0.088,
+      "blocks": 115,
+      "regretted": 3,
+      "observed_rate": 0.026
+    }
+  ],
+  "calibration_monotonic": false,
+  "errors": 0,
+  "seconds": 130.6,
+  "url": "https://github.com/spf13/viper.git",
+  "language": "go",
+  "sha": "528f7416c4b56a4948673984b190bf8713f0c3c4",
+  "max_commits": 500,
+  "window": 300
+}
