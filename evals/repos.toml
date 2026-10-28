@@ -1,0 +1,75 @@
+# Pooled backtest suite. Each repo is checked out at `sha` so results are reproducible.
+# Chosen for long histories, plenty of bugfix commits, and mid size (a run takes minutes).
+# The first three were the original benchmark; the rest were added 2026-10-29.
+
+[[repo]]
+name = "cobra"
+url = "https://github.com/spf13/cobra.git"
+language = "go"
+sha = "adbc8813901bba65827259daa8e22ff94ec1f30e"
+
+[[repo]]
+name = "requests"
+url = "https://github.com/psf/requests.git"
+language = "python"
+sha = "3c7baaa05ab4aa49cc819ce3a819d260de19c157"
+
+[[repo]]
+name = "express"
+url = "https://github.com/expressjs/express.git"
+language = "javascript"
+sha = "1c6f1b0fe4000977b9a7b4f34097e4d527dd9824"
+
+[[repo]]
+name = "flask"
+url = "https://github.com/pallets/flask.git"
+language = "python"
+sha = "d086db856be187255b8ec61ef409357393020f32"
+
+[[repo]]
+name = "click"
+url = "https://github.com/pallets/click.git"
+language = "python"
+sha = "2247b35ea1c47c727d7a06e51fa280e12a863ff6"
+
+[[repo]]
+name = "attrs"
+url = "https://github.com/python-attrs/attrs.git"
+language = "python"
+sha = "c8bb9bfaa2843e7844b5bb13bed4370b51feec4f"
+
+[[repo]]
+name = "axios"
+url = "https://github.com/axios/axios.git"
+language = "javascript"
+sha = "9d11464a75ee5c644c0308d742f58755c0482594"
+
+[[repo]]
+name = "koa"
+url = "https://github.com/koajs/koa.git"
+language = "javascript"
+sha = "b786e7b456782c2cff1d6549cd4c8dba3feeb262"
+
+[[repo]]
+name = "gin"
+url = "https://github.com/gin-gonic/gin.git"
+language = "go"
+sha = "0f09c3a9b4626d9fe9979cf4d0521d6ae32ab646"
+
+[[repo]]
+name = "logrus"
+url = "https://github.com/sirupsen/logrus.git"
+language = "go"
+sha = "6ef0748d1177dadaeee9aa79ffef604570f487d7"
+
+[[repo]]
+name = "viper"
+url = "https://github.com/spf13/viper.git"
+language = "go"
+sha = "528f7416c4b56a4948673984b190bf8713f0c3c4"
+
+[[repo]]
+name = "gson"
+url = "https://github.com/google/gson.git"
+language = "java"
+sha = "57731049da3e415be3d5d34db1ca3b80f3c73810"

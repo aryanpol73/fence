@@ -12,6 +12,7 @@ have been risky. So precision here is conservative, and the report says so.
 
 from __future__ import annotations
 
+import math
 import secrets
 import statistics
 import time
@@ -105,8 +106,9 @@ class BacktestReport:
                                               if self.commits_evaluated else None),
             "median_check_seconds": (round(statistics.median(self.latencies), 3)
                                      if self.latencies else None),
-            "p90_check_seconds": (round(sorted(self.latencies)[int(0.9 * (len(self.latencies)
-                                                                          - 1))], 3)
+            # Nearest-rank percentile: never below the median, even for small samples.
+            "p90_check_seconds": (round(sorted(self.latencies)[
+                min(len(self.latencies) - 1, math.ceil(0.9 * len(self.latencies)) - 1)], 3)
                                   if self.latencies else None),
             "median_lead_days": round(statistics.median(self.leads), 1) if self.leads else None,
             "calibration": self.calibration(),
