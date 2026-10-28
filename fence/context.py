@@ -29,6 +29,7 @@ class Context:
     notes: list[str] = field(default_factory=list)
     # Backtests set this to the commit time being replayed, so no later history leaks in.
     as_of: int | None = None
+    cache: dict = field(default_factory=dict)  # per-operation memo (manifests etc.)
 
     @classmethod
     def open(cls, path: str | Path = ".", *, create: bool = True) -> Context:

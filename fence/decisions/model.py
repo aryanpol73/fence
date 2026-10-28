@@ -13,7 +13,7 @@ SCHEMA = "fence/v1"
 
 EvidenceType = Literal[
     "commit", "pr", "issue", "review_comment", "revert", "code_comment", "test", "ticket",
-    "incident_link",
+    "incident_link", "obsolescence",
 ]
 RetrievalStatus = Literal["ok", "not_fetched", "unreachable", "orphaned", "not_indexed"]
 Status = Literal["active", "superseded", "reverted", "orphaned", "stale-suspected"]

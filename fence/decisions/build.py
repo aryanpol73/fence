@@ -13,7 +13,7 @@ import re
 from dataclasses import dataclass, field
 
 from fence.context import Context
-from fence.decisions import reasons
+from fence.decisions import obsolete, reasons
 from fence.decisions.model import Anchor, DecisionRecord, Evidence
 from fence.git.blame import BlameLine, blame
 from fence.git.log import log_line_range
@@ -366,6 +366,17 @@ def _record(
         anchors.append(Anchor(target.path, a, b, sym.qualname if sym else None,
                               plugin.name if plugin else None, tuple(history)))
     status = "orphaned" if row and row.orphaned else "active"
+    if deep and status == "active":
+        stale = obsolete.caller_findings(ctx.repo, target.rev, anchors[0].symbol, target.path)
+        stale += obsolete.flag_findings(ctx.repo, target.rev, code_lines, target.path)
+        if row and dtype in ("compatibility", "dependency-pin", "bugfix"):
+            stale += obsolete.dependency_findings(ctx.repo, sha, target.rev, message,
+                                                  ctx.cache)
+        for s in stale:
+            add(type="obsolescence", ref=target.rev[:12], url=None, timestamp=None, author=None,
+                quote=f"possibly obsolete, verify: {s}")
+        if stale:
+            status = "stale-suspected"
     return DecisionRecord(
         id=decision_id(sha, filename), anchors=anchors, type=dtype, grade=grade,  # type: ignore[arg-type]
         stated_reason=stated, stated_reason_evidence=stated_ev, inferred_reason=inferred,
