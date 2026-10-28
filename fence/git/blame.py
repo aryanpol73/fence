@@ -65,12 +65,26 @@ def read_ignore_revs(repo: Repo, base_sha: str) -> list[str]:
     return revs
 
 
-def blame(repo: Repo, base: str, path: str, ranges: Sequence[tuple[int, int]]) -> list[BlameLine]:
-    """Blame the 1-based inclusive `ranges` of `path` at `base`. One git call per file."""
+def blame(
+    repo: Repo,
+    base: str,
+    path: str,
+    ranges: Sequence[tuple[int, int]],
+    *,
+    extra_ignore: Sequence[str] = (),
+) -> list[BlameLine]:
+    """Blame the 1-based inclusive `ranges` of `path` at `base`. One git call per file.
+
+    `extra_ignore` adds full SHAs to skip, such as formatting-only commits found by
+    the indexer. They come from Fence's own analysis, not from repository text.
+    """
     base_sha = repo.verify_ref(base)
     rel = repo.safe_relpath(path)
     _check_ranges(ranges)
     ignore = read_ignore_revs(repo, base_sha)
+    for sha in extra_ignore:
+        if _SHA.fullmatch(sha) and sha not in ignore and len(ignore) < MAX_IGNORE_REVS * 2:
+            ignore.append(sha)
 
     args = ["blame", "-w", "-C", "--line-porcelain", "--ignore-revs-file="]
     for sha in ignore:
