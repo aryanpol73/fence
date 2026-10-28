@@ -372,3 +372,45 @@ def scan_cmd(
 
 if __name__ == "__main__":
     app()
+
+
+@app.command("backtest")
+def backtest_cmd(
+    max_commits: Annotated[int, typer.Option(help="Commits to replay.")] = 300,
+    window: Annotated[int, typer.Option(help="Later commits in which a regret can appear.")]
+    = 200,
+    rev: Annotated[str, typer.Option(help="Newest revision of the replayed range.")] = "HEAD",
+    fast: Annotated[bool, typer.Option("--fast", help="Skip line-history walks.")] = False,
+    repo: RepoOpt = Path("."), json_out: JsonOpt = False,
+) -> None:
+    """Removal-Regret Backtest: would Fence have warned about removals later undone?"""
+    from fence.eval.backtest import backtest
+
+    ctx = _open(repo)
+    if not json_out:
+        typer.echo("fence: indexing...", err=True)
+    index_repo(ctx.repo, ctx.store, ctx.cfg, detect_format=detect_format_only)
+
+    def progress(n: int, total: int) -> None:
+        if not json_out:
+            typer.echo(f"  replayed {n}/{total} commits...", err=True)
+
+    try:
+        rep = backtest(ctx, rev=rev, max_commits=max_commits, window=window, deep=not fast,
+                       progress=progress)
+    except GitError as e:
+        raise _fail(str(e)) from None
+    s = rep.summary()
+    if json_out:
+        examples = [o.__dict__ for o in rep.outcomes if o.regretted][:20]
+        typer.echo(dumps({"schema": "fence/v1", "kind": "backtest", **s, "regretted_examples":
+                          examples}))
+        return
+    for k, v in s.items():
+        if k != "calibration":
+            typer.echo(f"{k:<32} {v}")
+    typer.echo("calibration (warned blocks by confidence):")
+    for b in s["calibration"]:
+        typer.echo(f"  {b['confidence']}: {b['warned']} warned, {b['regretted']} regretted, "
+                   f"observed precision {b['observed_precision']}")
+    typer.echo("Note: regret labels are a lower bound, so precision is conservative.")

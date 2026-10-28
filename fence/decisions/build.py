@@ -270,7 +270,7 @@ def _record(
 
     # Reverts.
     reverted = ctx.store.reverted_by(sha)
-    reverters = ctx.store.reverts_of(sha)
+    reverters = ctx.store.reverts_of(sha, as_of=ctx.as_of)
     if reverted:
         add(type="revert", ref=reverted, url=ctx.commit_url(reverted), timestamp=None,
             author=None, quote="this commit reverts " + reverted[:12])
@@ -417,8 +417,9 @@ def _later_commits_to_file(ctx: Context, history: list[str], row: CommitRow | No
         return 0
     r = ctx.store.conn.execute(
         "SELECT COUNT(DISTINCT c.sha) AS n FROM commits c JOIN file_changes f ON f.sha = c.sha "  # noqa: S608
-        f"WHERE f.path IN ({marks}) AND c.seq > ? AND c.orphaned = 0 AND c.format_only = 0",
-        [*history, seq["seq"]],
+        f"WHERE f.path IN ({marks}) AND c.seq > ? AND c.orphaned = 0 AND c.format_only = 0"
+        " AND c.committer_time <= ?",
+        [*history, seq["seq"], ctx.as_of if ctx.as_of is not None else 2**62],
     ).fetchone()
     return int(r["n"])
 

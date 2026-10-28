@@ -27,6 +27,8 @@ class Context:
     store: Store
     slug: tuple[str, str] | None = None
     notes: list[str] = field(default_factory=list)
+    # Backtests set this to the commit time being replayed, so no later history leaks in.
+    as_of: int | None = None
 
     @classmethod
     def open(cls, path: str | Path = ".", *, create: bool = True) -> Context:

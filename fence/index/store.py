@@ -270,11 +270,15 @@ class Store:
             )
         ]
 
-    def reverts_of(self, sha: str) -> list[str]:
-        """Commits that revert `sha`."""
+    def reverts_of(self, sha: str, *, as_of: int | None = None) -> list[str]:
+        """Commits that revert `sha` (committed at or before `as_of`, if given)."""
         return [
             r["sha"]
-            for r in self.conn.execute("SELECT sha FROM reverts WHERE reverted_sha = ?", (sha,))
+            for r in self.conn.execute(
+                "SELECT r.sha FROM reverts r JOIN commits c ON c.sha = r.sha "
+                "WHERE r.reverted_sha = ? AND c.committer_time <= ? ORDER BY c.seq",
+                (sha, as_of if as_of is not None else 2**62),
+            )
         ]
 
     def reverted_by(self, sha: str) -> str | None:
