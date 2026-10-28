@@ -10,8 +10,10 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
+from fence.anchors.fingerprint import containment, shingles
+from fence.check.diff import DiffError, parse_diff
 from fence.context import Context
 from fence.decisions import obsolete, reasons
 from fence.decisions.model import Anchor, DecisionRecord, Evidence
@@ -20,7 +22,7 @@ from fence.git.log import log_line_range
 from fence.git.runner import GitError
 from fence.globs import match_any
 from fence.index.store import CommitRow
-from fence.lang import enclosing_symbol, plugin_for
+from fence.lang import enclosing_symbol, plugin_for, tokens_for
 from fence.scoring.strength import StrengthInputs, strength
 from fence.signals.catalog import (
     DECISION_TYPES,
@@ -141,6 +143,17 @@ def decisions_for_lines(
     groups: dict[tuple[str, str], list[BlameLine]] = {}
     for bl in blamed:
         groups.setdefault((bl.sha, bl.filename), []).append(bl)
+    for _ in range(3):  # follow moves at most three hops back
+        moved = False
+        for key in list(groups):
+            followed = _follow_move(ctx, key[0], key[1], groups[key])
+            if followed:
+                del groups[key]
+                for bl in followed:
+                    groups.setdefault((bl.sha, bl.filename), []).append(bl)
+                moved = True
+        if not moved:
+            break
     rows = ctx.store.commits(sha for sha, _ in groups)
     records = [
         _record(ctx, target, lines, sha, filename, bls, rows.get(sha), history, deep=deep)
@@ -148,6 +161,65 @@ def decisions_for_lines(
     ]
     records.sort(key=lambda r: (-r.strength.value, -r.introduced_at, r.id))
     return records
+
+
+def _follow_move(ctx: Context, sha: str, filename: str,
+                 bls: list[BlameLine]) -> list[BlameLine] | None:
+    """If `sha` moved these lines here from another file (which git blame -C can miss),
+    return blame lines from that file at `sha`'s parent, keeping current line numbers."""
+    row = ctx.store.commit(sha)
+    if row is None or len(row.parents) != 1:
+        return None
+    sources = [c.path if c.status != "R" else c.old_path for c in ctx.store.changes_for(sha)
+               if (c.old_path or c.path) != filename and (c.deleted or 0) > 0]
+    sources = [s for s in sources if s][:20]
+    group_tokens = tokens_for(filename, "\n".join(bl.content for bl in bls))
+    exact = {bl.content.strip() for bl in bls}
+    distinctive = all(len(t) >= 15 for t in exact)
+    if not sources or (len(group_tokens) < 8 and not distinctive):
+        return None
+    digest = hashlib.sha256(chr(0).join(group_tokens).encode()).hexdigest()[:12]
+    key = f"move:{sha}:{filename}:{digest}"
+    if (cached := ctx.store.cache_get(key)) is not None and not cached:
+        return None
+    try:
+        text = ctx.repo.run(["show", "--format=", "-U0", "--no-color", "--no-ext-diff",
+                             "--src-prefix=a/", "--dst-prefix=b/", sha, "--", *sources])
+        files = parse_diff(text)
+    except (GitError, DiffError):
+        return None
+    group_sh = shingles(group_tokens)
+    for f in files:
+        if f.old_path is None:
+            continue
+        for b in f.blocks:
+            removed_text = "\n".join(t for _, t in b.removed)
+            same = exact <= {t.strip() for _, t in b.removed}
+            if not (same and distinctive) and containment(
+                    group_sh, shingles(tokens_for(f.old_path, removed_text))) < 0.8:
+                continue
+            by_text: dict[str, int] = {}
+            for n, t in b.removed:
+                by_text.setdefault(t.strip(), n)
+            src_lines = {bl.final_line: by_text.get(bl.content.strip()) for bl in bls}
+            wanted = sorted({n for n in src_lines.values() if n})
+            if not wanted:
+                continue
+            try:
+                older = blame(ctx.repo, row.parents[0], f.old_path,
+                              [(n, n) for n in wanted][:200])
+            except GitError:
+                return None
+            by_line = {bl.final_line: bl for bl in older}
+            out = []
+            for bl in bls:
+                src = src_lines.get(bl.final_line)
+                out.append(replace(by_line[src], final_line=bl.final_line, content=bl.content)
+                           if src in by_line else bl)
+            return out
+    with ctx.store.transaction():
+        ctx.store.cache_put(key, 0)
+    return None
 
 
 def decision_id(sha: str, path: str) -> str:
