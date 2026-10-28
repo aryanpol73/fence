@@ -335,10 +335,11 @@ def _record(
         cues = [d for s, d in signals if _TEXT_TYPE.get(s) == dtype][:2]
         cue = f" ({', '.join(repr(clean(c, max_len=40)) for c in cues)})" if cues else ""
         inferred = f"Inferred: looks like a {dtype} change{cue}; no reason is stated."
-    elif grade == "D" and (test_paths or reverters):
+    elif grade == "D" and reverters:
+        # A test alongside is a strength factor, not a reason: it no longer lifts D to C
+        # (backtest: it graded most of a well-tested repo C without predicting anything).
         grade = "C"
-        inferred = ("Inferred: added together with a test" if test_paths
-                    else "Inferred: was reverted and then restored") + "; no reason is stated."
+        inferred = "Inferred: was reverted and then restored; no reason is stated."
 
     later_count = _later_commits_to_file(ctx, history, row)
     inputs = StrengthInputs(

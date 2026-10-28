@@ -80,6 +80,8 @@ class ScoringConfig(_Section):
     weights: dict[str, float] = {}
     bands: BandThresholds = BandThresholds()
     min_confidence_to_warn: float = Field(0.3, ge=0.0, le=1.0)
+    # Below this Change Risk a touched decision is CLEAR, not VERIFY (noise budget).
+    verify_min_risk: int = Field(50, ge=1, le=100)
     grade_floor_for_block: Grade = "C"
 
     def band(self, score: float) -> Band:

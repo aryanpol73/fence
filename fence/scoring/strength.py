@@ -28,7 +28,7 @@ WEIGHTS: dict[str, float] = {
     "link.each": 5, "link.cap": 15,
     "corroboration.each": 3, "corroboration.cap": 9,
     # code
-    "code.cap": 20,
+    "code.cap": 12,
     # history shape
     "survival.per_year": 3, "survival.cap": 9, "survival.min_later_commits": 3,
     "regression.each": 8, "regression.cap": 24,
@@ -38,7 +38,7 @@ WEIGHTS: dict[str, float] = {
     # negatives
     "neg.bulk": -10, "neg.vendored": -30, "neg.automated": -10, "neg.refactor": -6,
     # change risk
-    "kind.delete": 1.0, "kind.loosen": 0.85, "kind.alter": 0.6, "kind.move": 0.3,
+    "kind.delete": 1.0, "kind.loosen": 0.85, "kind.alter": 0.5, "kind.move": 0.3,
     "risk.tests_removed": 10, "risk.linked_tests_touched": 5,
 }
 

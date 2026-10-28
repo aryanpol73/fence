@@ -236,7 +236,10 @@ def _verdict(cfg: Config, d: DecisionRecord, risk: Score, fail_on: str,
     )
     if can_block and BANDS.index(risk.band) >= BANDS.index(fail_on):
         return KEEP
-    if risk.value >= cfg.scoring.bands.medium and cls.kind != "move":
+    # Stated reasons (A/B) are rare and precise; inferred ones (C/D) are noisy, so they
+    # need more risk before they interrupt anyone.
+    floor = cfg.scoring.bands.medium if d.grade in ("A", "B") else cfg.scoring.verify_min_risk
+    if risk.value >= floor and cls.kind != "move":
         return VERIFY
     return CLEAR
 
