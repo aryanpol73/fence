@@ -10,10 +10,13 @@ from a diff, a CLI argument, or later from model output. So:
 
 from __future__ import annotations
 
+import codecs
 import os
 import re
 import subprocess
-from collections.abc import Sequence
+import tempfile
+import threading
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
@@ -104,10 +107,67 @@ class Repo:
         """Return the contents of `path` at `ref` (`git show ref:path`)."""
         sha = self.verify_ref(ref)
         rel = self.safe_relpath(path)
-        text = self.run(["show", f"{sha}:{rel}"])
-        if len(text.encode("utf-8", errors="replace")) > max_bytes:
-            raise GitError(f"file too large to read: {rel}")
-        return text
+        # Check the size before reading, so a huge blob in a hostile repo is never loaded.
+        size = self.run(["cat-file", "-s", f"{sha}:{rel}"]).strip()
+        if not size.isdigit() or int(size) > max_bytes:
+            raise GitError(f"file too large to read: {rel} ({size} bytes)")
+        return self.run(["show", f"{sha}:{rel}"])
+
+    def stream(
+        self, args: Sequence[str], *, timeout: float | None = None, chunk_size: int = 65536
+    ) -> Iterator[str]:
+        """Run `git <args>` and yield stdout in text chunks, for output too big to hold.
+
+        `timeout` bounds the whole run. Stopping iteration early kills git.
+        """
+        return _stream(args, cwd=self.root, timeout=timeout or self.timeout, chunk_size=chunk_size)
+
+
+def _stream(args: Sequence[str], *, cwd: Path, timeout: float, chunk_size: int) -> Iterator[str]:
+    if isinstance(args, str):
+        raise TypeError("git args must be a list, not a string")
+    argv = ["git", "-c", "core.fsmonitor=false", "-c", "core.quotePath=false", *args]
+    # stderr goes to a file: a PIPE nobody reads can fill up and deadlock git.
+    with tempfile.TemporaryFile() as err:
+        try:
+            proc = subprocess.Popen(
+                argv, cwd=cwd, env=_git_env(), stdout=subprocess.PIPE, stderr=err, shell=False
+            )
+        except FileNotFoundError:
+            raise GitError("git executable not found") from None
+        timed_out = threading.Event()
+
+        def _kill() -> None:
+            timed_out.set()
+            proc.kill()
+
+        timer = threading.Timer(timeout, _kill)
+        timer.daemon = True
+        timer.start()
+        decoder = codecs.getincrementaldecoder("utf-8")(errors="replace")
+        try:
+            assert proc.stdout is not None  # noqa: S101 - set by stdout=PIPE
+            while data := proc.stdout.read1(chunk_size):
+                yield decoder.decode(data)
+            tail = decoder.decode(b"", final=True)
+            if tail:
+                yield tail
+            returncode = proc.wait()
+        finally:
+            timer.cancel()
+            if proc.poll() is None:
+                proc.kill()
+                proc.wait()
+            if proc.stdout is not None:
+                proc.stdout.close()
+        if timed_out.is_set():
+            raise GitTimeout(f"git {args[0] if args else ''} timed out after {timeout}s")
+        if returncode != 0:
+            err.seek(0)
+            stderr = err.read(MAX_STDERR_CHARS * 4).decode("utf-8", "replace").strip()
+            raise GitError(
+                f"git {args[0] if args else ''} failed ({returncode}): {stderr[:MAX_STDERR_CHARS]}"
+            )
 
 
 def _run(args: Sequence[str], *, cwd: Path, timeout: float) -> str:

@@ -1,21 +1,13 @@
-# Fence configuration. Secrets never go in this file; they come from the environment.
+# Fence's own configuration (dogfooding). Every key is optional; see `fence config`
+# for the full list with defaults. Secrets never go in this file; they come from
+# the environment.
 
-[git]
+[performance]
 # Every git call is killed after this many seconds.
-timeout_seconds = 10
+git_timeout_seconds = 10
 
-[cache]
-# Outside the working tree by default, because the cache holds private repo content.
-path = "~/.cache/fence/fence.sqlite3"
-
-[models]
-# Filled in on Day 2 after checking current model names in the Anthropic API docs.
-# Never hard-code model names in the code; read them from here.
-triage = ""
-extract = ""
-judge = ""
-investigator = ""
-
-[egress]
-# Paths never sent to the LLM API.
-exclude = ["secrets/**", "**/*.env", "**/.env"]
+[llm]
+# Off by default; the core never needs it. Model names live here, never in code.
+enabled = false
+model = ""
+redact_paths = ["secrets/**", "**/*.env", "**/.env"]
