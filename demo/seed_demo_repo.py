@@ -78,7 +78,8 @@ def refund(gateway, charge_id, amount_cents):
 
 CLEANUP = C5.replace("import time\n", "").replace("            time.sleep(2)\n", "")
 HARMLESS = C5.replace(
-    "def refund(gateway, charge_id, amount_cents):\n    return gateway.create_refund(charge_id, amount_cents)",
+    "def refund(gateway, charge_id, amount_cents):\n"
+    "    return gateway.create_refund(charge_id, amount_cents)",
     "def refund(gateway, charge_id, amount):\n    return gateway.create_refund(charge_id, amount)",
 )
 
@@ -90,7 +91,9 @@ PEOPLE = {
 }
 
 
-def _git(repo: Path, *args: str, who: str = "priya", date: str = "2026-01-01T10:00:00+05:30") -> str:
+def _git(
+    repo: Path, *args: str, who: str = "priya", date: str = "2026-01-01T10:00:00+05:30"
+) -> str:
     name, email = PEOPLE[who]
     env = {
         **os.environ,
@@ -185,7 +188,8 @@ def main() -> None:
     parser.add_argument("--no-ignore-revs", action="store_true")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
-    print(json.dumps(seed(args.out, ignore_revs=not args.no_ignore_revs, force=args.force), indent=2))
+    result = seed(args.out, ignore_revs=not args.no_ignore_revs, force=args.force)
+    print(json.dumps(result, indent=2))
 
 
 if __name__ == "__main__":

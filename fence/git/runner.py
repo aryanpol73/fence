@@ -70,7 +70,9 @@ class Repo:
         """Return the full commit SHA for `ref`, or raise UnsafeInput / GitError."""
         if not ref or not _REF_PATTERN.match(ref) or ".." in ref:
             raise UnsafeInput(f"rejected ref: {ref!r}")
-        out = self.run(["rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}"])
+        out = self.run(
+            ["rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}"]
+        )
         sha = out.strip()
         if not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", sha):
             raise GitError(f"could not resolve ref: {ref!r}")
