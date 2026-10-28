@@ -16,7 +16,7 @@ What is done, partial, or not done, each with the reason. Kept accurate to the c
 - **F2 deterministic extraction:** signal catalog (text, label and code signals, each
   unit-tested), strict A-D grading, verbatim stated reasons, `Inferred:` marking, and
   injection-sentence filtering.
-- **F3 why:** file, line, range or symbol targets; strongest-first or newest-first; reverts,
+- **F3 why:** file, line, range or symbol targets; commit/PR/issue text scoped to the code it names (`reason_scope`); strongest-first or newest-first; reverts,
   regression chain, orphaned evidence; human and JSON (`fence/v1`) output.
 - **F4 check:** working tree, staged, range, PR or diff file; delete/loosen/alter/move
   classification; explainable risk; policy file with path overrides; ack ledger with
@@ -41,23 +41,24 @@ What is done, partial, or not done, each with the reason. Kept accurate to the c
 
 ## Partial
 
-- **Calibration (target missed on held-out data).** Change Risk now carries an outcome
-  calibration: the observed regret rate for its risk bin, from a static isotonic table fitted
-  on cobra + requests (`fence/scoring/calibration.json`). On those repos the rate is
-  monotonic: 2.0% / 3.3% / 8.8% for risk 0-29 / 30-50 / 51-100. On held-out express it is
-  flat (1.7% / 1.9% / 1.9%), so it is not monotonic there.
-  - Why it falls short: 27 regrets on the fitting set and 10 on express are too few to
-    estimate rates that transfer between repos.
-  - Evidence confidence (grade and coverage) is shown separately, labelled as such, and is
-    not an outcome probability.
-- **Backtest precision (2x target missed).** At 500 commits:
-  - cobra: 2.85x lift, 43% recall.
-  - requests: 1.6x lift, 25% recall.
-  - held-out express: 0.96x lift, 20% recall.
-  The tuning-set gains did not generalize. Per the overfitting guard, no further tuning was
-  done against express.
-- **Noise (5% target missed on two of three).** cobra warns on 6.2% of commits (was 12%),
-  requests on 1.6% (was 2.2%), express on 7.4% (was 9.8%).
+- **Risk scoring: no predictive value shown.** The pooled backtest covers 11 repos, 5,674
+  removal blocks and 178 regrets, measured before the scoring fix:
+  - Lift is 1.12x, repo-bootstrap 95% CI [0.47, 1.75]. It is above 1 on only 4 of 11 repos.
+  - Regret rate by band: low 4.2%, medium 2.6%, high 2.2%, critical 3.8%. It does not rise
+    with risk.
+  - Thresholds and weights were left unchanged: tuning cannot add signal that the score
+    lacks.
+  - Scores are explained evidence summaries, not likelihoods.
+- **Calibration: withdrawn.** The regret-rate table fitted on cobra + requests did not
+  transfer. A table refitted leave-one-repo-out was non-decreasing on only 2 of 10 held-out
+  repos. No table ships, so findings carry no outcome probability. The fitting code
+  (`fence/scoring/calibration.py`) and the backtest's per-bin report remain.
+- **Pooled numbers after evidence scoping: not measured.** Scoping lowers Strength for code
+  that came from multi-file commits. The suite (`evals/run_suite.py`, resumable) has not been
+  re-run since. attrs is missing from the pooled set (its clone failed).
+- **Evidence scoping is lexical.** Commit, PR and issue sentences count for code only if
+  they name the file, a symbol in the span or a distinctive identifier. Sentences that
+  describe the code in other words are treated as change-level (grade C).
 - **`check` latency** is 0.7-0.9s median and 2.0-2.8s p90 per commit on Windows (500-commit
   backtests). It can go over the 2-3s target on larger diffs, because line-history walks
   run once per decision. Hook mode skips them.

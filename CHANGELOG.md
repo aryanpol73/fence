@@ -4,6 +4,12 @@ All notable changes to Fence. Versions follow semantic versioning.
 
 ## 0.1.0 (unreleased)
 
+### Explanation quality and pooled evaluation
+
+- `why` scopes commit, PR and issue text to the code it names. Multi-file commits no longer hand one reason sentence to every file. Change-level reasons are labelled `Inferred:` and graded C (`reason_scope`, `change_reason` in JSON). Only name-related tests count as evidence. Span labels name a symbol only if it contains the whole span.
+- Pooled eval suite: `evals/repos.toml` (pinned SHAs), `evals/run_suite.py` (resumable), `evals/analyze.py` (Wilson and bootstrap intervals, leave-one-repo-out).
+- Removed the shipped regret-rate calibration table, which pooled evidence contradicts. Thresholds and weights are unchanged.
+
 ### Precision and calibration round
 
 - VERIFY now needs risk >= 50, except stated (A/B) decisions of high-stakes types (`scoring.high_stakes_types`).

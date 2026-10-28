@@ -210,65 +210,87 @@ errors.
 
 ## Measured results
 
-### Removal-Regret Backtest
+### Explanation scoping
 
-Command: `fence backtest --max-commits 500 --window 300`. It replays the newest 800
-first-parent commits and evaluates the oldest 500, each with up to 300 later commits in
-which a regret can appear.
+`why` scopes commit, PR and issue text to the code it is about:
+- If this file is the change's only source file, the whole message applies.
+- Otherwise, only sentences that name the file, a symbol in the span, or a distinctive
+  identifier from the lines count as this code's reason.
+- A reason the change gives for itself, naming no other file, is shown as
+  `Inferred: added in a change to N source files whose message says "..."`. It is graded
+  C, with `reason_scope: "change"` in JSON.
+- Test files count as evidence only if they match the file by name (or the change was
+  focused).
 
-- A removal block (8+ code tokens, non-test source, not a move) is **regretted** if it is
-  reverted, or its code is re-added to the same file within the window.
-- A block is **warned** if Fence says KEEP or VERIFY, using only history up to the commit's
-  parent.
+Example (this repo, commit be874db, which added 8 source files at once):
 
-Local-git mode, no GitHub token, Windows 11, run 2026-10-28/29. Thresholds were tuned on
-cobra and requests only; express is **held out** and was not used for tuning.
+| Target | Before | After |
+|---|---|---|
+| `fence why fence/config.py` | B, data-integrity: "The index is one SQLite file per repo…" plus `tests/gitfix.py` and `tests/test_globs.py` as evidence | B: "fence.toml now has every section … so a typo cannot silently weaken policy." Evidence: `tests/test_config.py` only |
+| `fence why fence/index/indexer.py` | B, data-integrity: the same SQLite sentence | C: "Inferred: added in a change to 8 source files whose message says 'The index is one SQLite file…'", labelled as not naming this code |
+| `fence why fence/config.py:85-200` | span 94-209 labelled `ScoringConfig`, with a data-integrity constraint | span labelled `<module>` (it crosses classes); no borrowed constraint |
 
-| Repo (HEAD) | Role | Removal blocks | Regretted (base rate) | Warned | Precision (lift) | Recall | Commits warned | Median / p90 check |
-|---|---|---|---|---|---|---|---|---|
-| spf13/cobra (`adbc881`) | tuning | 720 | 23 (3.2%) | 110 | 9.1% (2.85x) | 43% | 6.2% | 0.70s / 2.02s |
-| psf/requests (`3c7baaa0`) | tuning | 114 | 4 (3.5%) | 18 | 5.6% (1.6x) | 25% | 1.6% | 0.81s / 2.72s |
-| expressjs/express (`1c6f1b0f`) | held out | 564 | 10 (1.8%) | 121 | 1.7% (0.96x) | 20% | 7.4% | 0.86s / 2.84s |
+### Removal-Regret Backtest (pooled)
 
-Before this tuning round, the same runs gave:
-- cobra: 1.4x lift, 52% recall, 12% of commits warned;
-- requests: 1.2x lift, 25% recall, 2.2% of commits warned;
-- express: 1.4x lift, 40% recall, 9.8% of commits warned.
+`uv run python evals/run_suite.py` backtests every repo pinned in `evals/repos.toml`:
+- 500 first-parent commits per repo, regret window 300 commits.
+- Local-git mode, no token.
+- A block is regretted if it is reverted or its code is re-added to the same file.
 
-Targets were at most 5% of commits warned, at least 2x lift at about 25% recall, and
-monotonic calibration. Against them:
-- **Noise:** better on all three repos, held-out express included. The budget is met only on
-  requests; cobra is at 6.2% and express at 7.4%.
-- **Precision:** improved on the tuning set but **did not generalize**. Express is at the
-  base rate. With 4-23 regrets per repo, differences of a few regrets decide these
-  percentages.
-- **Calibration:** the shipped table (`fence/scoring/calibration.json`, isotonic fit on cobra
-  and requests) is monotonic there: 2.0% / 3.3% / 8.8% for risk 0-29 / 30-50 / 51-100. On
-  express the observed rates are flat (1.7% / 1.9% / 1.9%), so it is **not** monotonic on
-  held-out data.
+`uv run python evals/analyze.py` pools the results into `evals/results/pooled.md`:
+- Wilson 95% intervals for proportions.
+- A fixed-seed bootstrap over repos for lift.
+- A leave-one-repo-out calibration check.
 
-Reproduce:
+The results below cover 11 repos (Go, Python, JS, Java), measured at 4e27101, **before**
+the explanation-scoping change. attrs failed to clone (network reset) and is missing.
 
-```bash
-fence backtest -C path/to/repo --max-commits 500 --window 300 --json --dump outcomes.jsonl
-```
+| Metric | Value (95% CI) |
+|---|---|
+| Removal blocks / commits | 5,674 / 5,500 |
+| Regretted (base rate) | 178 (3.1% [2.7%, 3.6%]) |
+| Precision of warnings | 3.5% [2.7%, 4.7%] (47/1,334) |
+| Lift | 1.12x, repo-bootstrap CI [0.47, 1.75] |
+| Recall | 26.4% [20.5%, 33.3%] |
+| Commits warned | 6.8% [6.2%, 7.5%] |
 
-Refit the calibration table:
+| Risk band | Regret rate (95% CI) |
+|---|---|
+| low (<25) | 4.2% [3.4%, 5.2%] |
+| medium (25-59) | 2.6% [2.0%, 3.2%] |
+| high (60-84) | 2.2% [1.3%, 3.6%] |
+| critical (≥85) | 3.8% [1.5%, 9.3%] |
 
-```bash
-python -m fence.scoring.calibration fence/scoring/calibration.json a.jsonl b.jsonl
-```
+What this supports, and what it does not:
+- **Not supported:** that Change Risk predicts which removals get regretted.
+  - The lift interval includes 1, and regret rates do not rise with the risk band.
+  - Lift is above 1 on 4 of 11 repos.
+  - The leave-one-repo-out calibration is non-decreasing on only 2 of 10 held-out repos.
+  - The regret-rate calibration table was therefore withdrawn. Findings show no outcome
+    probability.
+- **Supported:** warnings are rare enough to read. 6.8% of commits are warned; the earlier
+  three-repo runs warned on up to 37%.
+- **How to read the scores:** each one is an explained summary of the evidence (grade,
+  type, history shape, code signals), not a calibrated likelihood. Read the evidence, not
+  the number.
+- **Not measured:** the pooled numbers after the scoping change. The change lowers Strength
+  for code from multi-file commits, so verdict counts will shift.
 
-Warm `fence why` on requests takes about 0.4s.
+Per-repo figures are in `evals/results/pooled.md`. Warm `fence why` on requests takes
+about 0.4s, and a 10-file `check` about 2s.
 
 **Attribution** (labelled scenarios in `tests/test_attribution.py`): Fence 6/6 versus plain
 `git blame` 3/6. Plain blame misses the reformat, the reindent and the cross-file move.
 
 ## Known limitations
 
+- Risk scores do not predict regretted removals on the pooled backtest (lift 1.12x, CI
+  [0.47, 1.75]). Treat verdicts as "evidence exists here", not as a probability.
+- Evidence scoping matches by explicit mention. A sentence that describes the code without
+  naming the file, a symbol or a distinctive identifier is treated as change-level (graded
+  C). One that names an identifier the code merely uses can still count as specific.
 - The backtest's regret labels (reverted, or the same code re-added in the same file) are a
-  lower bound, so precision is conservative. On the repos tested so far, regretted removals
-  are rare and mostly mundane, so the recall figures rest on small samples.
+  noisy, lower-bound proxy for "risky removal".
 - Without `GITHUB_TOKEN`, grade A is unreachable (local-git mode), and `fence doctor` says so.
 - Rebase-merged PRs map to their PR only through the GitHub API.
 - Symbol anchors cover Python, JS/TS, Go and Java. Other languages get file and line anchors,
