@@ -87,3 +87,14 @@ def test_doctor_and_config(demo: dict) -> None:
     assert {"git", "index", "github"} <= names
     cfg = runner.invoke(app, ["config", "-C", demo["repo"], "--json"])
     assert json.loads(cfg.stdout)["policy"]["fail_on_band"] == "high"
+
+
+def test_scan_and_report(demo: dict, tmp_path: Path) -> None:
+    scan = runner.invoke(app, ["scan", "payments", "-C", demo["repo"], "--json"])
+    assert scan.exit_code == 0
+    assert json.loads(scan.stdout)["decisions"][0]["file"] == "payments/client.py"
+    out = tmp_path / "r.html"
+    rep = runner.invoke(app, ["report", "-C", demo["repo"], "--format", "html", "-o", str(out)])
+    assert rep.exit_code == 0 and "<h2>Load-bearing" in out.read_text()
+    md = runner.invoke(app, ["report", "-C", demo["repo"]])
+    assert "Fragile and undocumented" in md.stdout

@@ -529,3 +529,28 @@ def comment_cmd(
                    err=True)
     else:
         typer.echo(f"fence: PR comment {result}")
+
+
+@app.command("report")
+def report_cmd(
+    path: Annotated[str, typer.Argument(help="Directory (default: repo root).")] = ".",
+    fmt: Annotated[str, typer.Option("--format", help="markdown | json | html")] = "markdown",
+    output: Annotated[Path | None, typer.Option("--output", "-o")] = None,
+    repo: RepoOpt = Path("."),
+) -> None:
+    """Hotspot report: load-bearing, fragile-undocumented, churn and ownership."""
+    from fence import report
+
+    ctx = _open(repo)
+    _ensure_indexed(ctx, True)
+    try:
+        data = report.build(ctx, path)
+    except GitError as e:
+        raise _fail(str(e)) from None
+    text = (dumps(data) if fmt == "json" else report.to_html(data) if fmt == "html"
+            else report.to_markdown(data))
+    if output:
+        output.write_text(text, encoding="utf-8")
+        typer.echo(f"wrote {output}")
+    else:
+        typer.echo(text)
