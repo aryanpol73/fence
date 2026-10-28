@@ -9,3 +9,9 @@ Append-only. One line per change to a default from the brief or CLAUDE.md, with 
 - 2026-10-28: Python is parsed with the stdlib `ast`/`tokenize`, not tree-sitter. It is the interpreter's exact grammar and needs no dependency. tree-sitter covers JS, TS/TSX, Go and Java.
 - 2026-10-28: Format-only detection verifies only candidates: commits whose message reads like formatting, or whose files kept their line counts. Verifying all commits would cost two blob reads per file over the whole history. Misses can still be listed in .git-blame-ignore-revs.
 - 2026-10-28: Noise tuning from the first real backtest (cobra + requests, 600 commits: 74% of removal commits warned, precision 1.9% against a 1.6% base rate). The code-signal cap drops from 20 to 12, the `alter` multiplier from 0.6 to 0.5, and a test added alongside no longer lifts grade D to C. VERIFY now needs risk >= 50 (`scoring.verify_min_risk`) for inferred grades C/D, and stays at the medium band (25) for stated grades A/B.
+- 2026-10-29: False-warning breakdown, 500-commit backtest, tuning set cobra + requests (286 warned blocks, 13 regretted; express held out):
+  - (1) docs/config paths: 41 warned, 0 regretted. Completion-script paths: 106 warned, 1 regretted. Half of all warnings carry almost no signal.
+  - (2) Inferred decision types carry no signal: type "bugfix" 72 warned, 0 regretted; grade C 72 warned, 1 regretted.
+  - (3) Grade D does relatively well (122 warned, 9 regretted). Its risk comes from history-shape factors (survival, people, re-fixes), not from inferred text.
+  - (4) Losing a guard signal barely helps (5.8% vs 4.0% regretted), too weak to require for VERIFY.
+  - (5) Nearly all warnings are deletes (275 of 286). Evidence confidence is not monotonic in regret rate, so it cannot serve as outcome confidence.
