@@ -244,6 +244,7 @@ def _record(
     message = row.message if row else first.summary
     ev: list[Evidence] = []
     authors = {first.author}
+    ctx_words = reasons.words(" ".join(bl.content for bl in bls) + " " + filename)
 
     def add(**kw) -> Evidence:
         e = Evidence(id=f"E{len(ev) + 1}", **kw)
@@ -282,7 +283,7 @@ def _record(
             sig_ids |= set(extract_labels(json.loads(prow["labels"] or "[]")))
             for reviewer in json.loads(prow["reviewers"] or "[]"):
                 authors.add(reviewer)
-            if (q := reasons.stated_reason(prow["body"] or "")) and not stated:
+            if (q := reasons.stated_reason(prow["body"] or "", ctx_words)) and not stated:
                 stated, stated_ev, grade = q, pe.id, "A"
             constraints += reasons.constraints(prow["body"] or "")
             alternatives += reasons.alternatives(prow["body"] or "")
@@ -328,7 +329,7 @@ def _record(
         links.append(f"PR #{pr}")
 
     # Commit message (grade B).
-    if not stated and (q := reasons.stated_reason(message)):
+    if not stated and (q := reasons.stated_reason(message, ctx_words)):
         stated, stated_ev, grade = q, commit_ev.id, "B"
     constraints += reasons.constraints(message)
     alternatives += reasons.alternatives(message)

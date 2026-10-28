@@ -47,14 +47,40 @@ def is_injection(sentence: str) -> bool:
     return bool(_INJECTION.search(sentence))
 
 
-def stated_reason(text: str) -> str | None:
-    """The first sentence in `text` that states a reason, verbatim, or None."""
-    for s in sentences(text):
-        if is_injection(s):
+_WORD = re.compile(r"[A-Za-z][A-Za-z0-9]{2,}")
+_STOP = {"the", "and", "for", "this", "that", "with", "from", "not", "are", "was", "but",
+         "def", "return", "self", "none", "true", "false", "import", "func", "var", "let",
+         "const", "class", "public", "private", "static", "void", "int", "str", "new"}
+
+
+def words(text: str) -> set[str]:
+    """Lower-case identifier parts (snake and camel case split), minus stop words."""
+    out = set()
+    for w in _WORD.findall(text):
+        for part in re.split(r"_|(?<=[a-z])(?=[A-Z])", w):
+            p = part.lower()
+            if len(p) >= 3 and p not in _STOP:
+                out.add(p)
+    return out
+
+
+def stated_reason(text: str, context: set[str] | None = None) -> str | None:
+    """A sentence in `text` that states a reason, verbatim, or None.
+
+    With `context` (words from the code and file name), the reason sentence sharing the
+    most words with it wins, so a multi-topic commit does not attach its first reason
+    to every line it touched. Ties keep the earliest sentence.
+    """
+    best: tuple[int, int, str] | None = None
+    for i, s in enumerate(sentences(text)):
+        if is_injection(s) or not _REASON.search(s):
             continue
-        if _REASON.search(s):
-            return clean(s, max_len=MAX_QUOTE)
-    return None
+        score = len(words(s) & context) if context else 0
+        if best is None or score > best[0]:
+            best = (score, i, s)
+        if not context:
+            break
+    return clean(best[2], max_len=MAX_QUOTE) if best else None
 
 
 _CONSTRAINT = re.compile(
