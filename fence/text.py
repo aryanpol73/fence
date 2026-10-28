@@ -18,14 +18,16 @@ _INVISIBLE = {
 }
 
 
-def clean(text: str, *, max_len: int = 500) -> str:
+def clean(text: str, *, max_len: int = 500, keep_newlines: bool = False) -> str:
     """Drop control and invisible characters, keep tabs as spaces, cap the length.
 
     Escape sequences such as "\\x1b[2J" would otherwise be executed by the terminal.
     """
     out = []
     for ch in text:
-        if ch == "\t":
+        if ch == "\n" and keep_newlines:
+            out.append(ch)
+        elif ch == "\t":
             out.append("    ")
         elif ch in _INVISIBLE or unicodedata.category(ch) in ("Cc", "Cf", "Cs", "Co"):
             out.append("�" if ch == "\x1b" else "")
