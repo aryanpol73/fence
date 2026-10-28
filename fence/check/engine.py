@@ -212,7 +212,8 @@ def _check_file(
         best: Finding | None = None
         for d in touched.values():
             risk = change_risk(d.strength, cls.kind, ctx.cfg, tests_removed=tests_removed,
-                               path_bonus=bonus, path_bonus_reason=bonus_reason)
+                               path_bonus=bonus, path_bonus_reason=bonus_reason,
+                               low_signal=match_any(path, ctx.cfg.scoring.low_signal_paths))
             f = Finding(
                 path=path, start=b.start, end=b.end, kind=cls.kind, kind_reason=cls.reason,
                 verdict=_verdict(ctx.cfg, d, risk, fail_on, cls), risk=risk, decision=d,

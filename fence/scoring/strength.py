@@ -40,6 +40,8 @@ WEIGHTS: dict[str, float] = {
     # change risk
     "kind.delete": 1.0, "kind.loosen": 0.85, "kind.alter": 0.5, "kind.move": 0.3,
     "risk.tests_removed": 10, "risk.linked_tests_touched": 5,
+    "risk.low_signal_share": 0.5,  # keep this share of risk on low-signal paths
+    "type.inferred_share": 0.5,  # type points kept when the type is only inferred (C/D)
 }
 
 BASE_CONFIDENCE = {"A": 0.85, "B": 0.75, "C": 0.5, "D": 0.3}
@@ -85,7 +87,12 @@ def strength(inp: StrengthInputs, cfg: Config) -> Score:
             f.append(Factor(fid, round(points, 1), reason))
 
     t = inp.decision_type
-    add(f"type.{t}", w.get(f"type.{t}", 0), f"introduced as a {t} change")
+    if inp.grade in ("A", "B"):
+        add(f"type.{t}", w.get(f"type.{t}", 0), f"introduced as a {t} change")
+    else:
+        # A type guessed from keywords predicted nothing in the backtest; count it half.
+        add(f"type.{t}", w.get(f"type.{t}", 0) * w["type.inferred_share"],
+            f"looks like a {t} change (inferred, counts {w['type.inferred_share']:g}x)")
     add(f"grade.{inp.grade}", w[f"grade.{inp.grade}"], _grade_reason(inp.grade))
     if inp.links:
         n = len(inp.links)
@@ -143,7 +150,7 @@ def confidence(inp: StrengthInputs) -> float:
 
 def change_risk(
     s: Score, kind: str, cfg: Config, *, tests_removed: bool = False,
-    path_bonus: int = 0, path_bonus_reason: str = "",
+    path_bonus: int = 0, path_bonus_reason: str = "", low_signal: bool = False,
 ) -> Score:
     w = weights(cfg)
     mult = w[f"kind.{kind}"]
@@ -154,6 +161,11 @@ def change_risk(
                         "tests are removed in the same change"))
     if path_bonus:
         f.append(Factor("risk.path", path_bonus, path_bonus_reason or "sensitive path"))
+    if low_signal:
+        keep = w["risk.low_signal_share"]
+        cut = -round(sum(x.points for x in f) * (1 - keep), 1)
+        f.append(Factor("risk.low_signal_path", cut,
+                        f"docs/config/generated path: risk scaled by {keep:g}"))
     value = int(round(max(0.0, min(100.0, sum(x.points for x in f)))))
     return Score(value, cfg.scoring.band(value), s.confidence, (*f, *s.factors),
                  s.what_would_change)

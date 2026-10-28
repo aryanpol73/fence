@@ -62,6 +62,7 @@ class BlockOutcome:
     dtype: str | None = None
     strength: int = 0
     lost: int = 0
+    factors: tuple[str, ...] = ()  # risk factor ids, for error analysis
 
 
 @dataclass
@@ -216,7 +217,8 @@ def backtest(ctx: Context, *, rev: str = "HEAD", max_commits: int = 300, window:
                              f.kind if f else None, f.decision.grade if f else None,
                              f.decision.type if f else None,
                              f.decision.strength.value if f else 0,
-                             len(f.lost_signals) if f else 0)
+                             len(f.lost_signals) if f else 0,
+                             tuple(x.id for x in f.risk.factors) if f else ())
             rep.outcomes.append(o)
             rep.blocks += 1
             rep.regretted += o.regretted

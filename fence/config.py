@@ -82,6 +82,13 @@ class ScoringConfig(_Section):
     min_confidence_to_warn: float = Field(0.3, ge=0.0, le=1.0)
     # Below this Change Risk a touched decision is CLEAR, not VERIFY (noise budget).
     verify_min_risk: int = Field(50, ge=1, le=100)
+    # Paths whose removals rarely matter (docs, build/config, generated completion
+    # scripts). Change Risk there is scaled by weights["risk.low_signal_share"].
+    low_signal_paths: list[str] = [
+        "docs/**", "doc/**", "**/*.md", "**/*.rst", "**/*.txt", "**/conf.py", "**/*.cfg",
+        "**/*.ini", "**/*.toml", "**/*.json", "**/*.yaml", "**/*.yml", "examples/**",
+        "example/**", "**/*completion*",
+    ]
     grade_floor_for_block: Grade = "C"
 
     def band(self, score: float) -> Band:

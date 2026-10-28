@@ -193,3 +193,19 @@ def test_parse_diff_rename_and_delete() -> None:
 def test_parse_diff_rejects_garbage() -> None:
     assert parse_diff("not a diff") == []
     assert CLEAR and VERIFY  # verdict names are exported
+
+
+def test_low_signal_paths_scale_risk_and_inferred_types_count_half() -> None:
+    from fence.decisions.model import Score
+    from fence.scoring.strength import StrengthInputs, change_risk, strength
+
+    cfg = parse_config("")
+    s = Score(80, "high", 0.7, ())
+    full = change_risk(s, "delete", cfg)
+    low = change_risk(s, "delete", cfg, low_signal=True)
+    assert low.value == full.value // 2
+    assert any(f.id == "risk.low_signal_path" for f in low.factors)
+    stated = strength(StrengthInputs(decision_type="bugfix", grade="B"), cfg)
+    inferred = strength(StrengthInputs(decision_type="bugfix", grade="C"), cfg)
+    t = {f.id: f.points for f in stated.factors}["type.bugfix"]
+    assert {f.id: f.points for f in inferred.factors}["type.bugfix"] == t / 2
