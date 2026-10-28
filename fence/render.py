@@ -156,6 +156,9 @@ def check_text(r: CheckResult, o: Out) -> str:
     out.append(f"Checked {r.blocks_checked} change block(s) in {r.files_checked} file(s) "
                f"against {r.base[:12]} in {r.seconds:.2f}s | exit {r.exit_code}"
                + (" (bypassed by env)" if r.bypassed else ""))
+    for path, g in r.ghosts:
+        out.append(f"Ghost fence: {path} re-adds code (similarity {g.similarity}) that was "
+                   f"removed in {g.removed_in[:12]} \"{g.subject}\" from {g.path}.")
     out += [f"Note: {x}" for x in r.notes]
     return "\n".join(out)
 
@@ -231,6 +234,7 @@ def check_json(r: CheckResult) -> dict:
         "files_checked": r.files_checked, "blocks_checked": r.blocks_checked,
         "seconds": r.seconds, "notes": r.notes,
         "findings": [finding_dict(f, r.base, r.head is None) for f in r.findings],
+        "ghosts": [{"path": p, **asdict(g)} for p, g in r.ghosts],
     }
 
 

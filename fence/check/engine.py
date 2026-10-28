@@ -29,6 +29,7 @@ from fence.diffing.ranges import RemovedRange
 from fence.git.blame import MAX_LINES
 from fence.git.runner import GitError
 from fence.globs import match_any
+from fence.index.ghosts import find_ghosts
 from fence.lang import tokens_for
 from fence.policy import acks as ackmod
 from fence.scoring.strength import change_risk
@@ -73,6 +74,7 @@ class CheckResult:
     blocks_checked: int = 0
     notes: list[str] = field(default_factory=list)
     bypassed: bool = False
+    ghosts: list = field(default_factory=list)  # (path, Ghost)
     seconds: float = 0.0
 
 
@@ -135,6 +137,10 @@ def check(
                                            include_clear=include_clear)
         except PreimageMismatch as e:
             raise DiffError(str(e)) from None
+    for fd in files:
+        if fd.added_lines and not match_any(fd.path, ctx.cfg.policy.ignore_paths):
+            result.ghosts += [(fd.path, g)
+                              for g in find_ghosts(ctx.store, fd.path, fd.added_lines)]
 
     # Within equal risk, blocks that drop a guard/retry/lock come first: they are the
     # lines a reviewer most needs to see.

@@ -112,6 +112,13 @@ def index(
                          progress=progress)
     except GitError as e:
         raise _fail(str(e)) from None
+    from fence.index.ghosts import scan_tombstones
+
+    try:
+        rep.notes.append(f"{scan_tombstones(ctx.repo, ctx.store, ctx.cfg)} new ghost-fence "
+                         "tombstones recorded")
+    except GitError as e:
+        rep.notes.append(f"ghost-fence scan skipped: {e}")
     gh = None
     if ctx.github_token and ctx.slug:
         from fence.github.sync import sync
