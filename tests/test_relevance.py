@@ -120,3 +120,22 @@ def test_span_label_contains_the_whole_span(tmp_path: Path,
 def test_purpose_clause_is_a_stated_reason() -> None:
     assert stated_reason("Reject unknown keys so a typo cannot weaken policy.")
     assert stated_reason("Reject unknown keys so it is strict.") is None
+
+
+def test_symbol_names_match_with_their_exact_case(tmp_path: Path,
+                                                  monkeypatch: pytest.MonkeyPatch) -> None:
+    # A class `Repo` is not named by the prose word "repo" (fence/git/runner.py was
+    # quoted the index's SQLite sentence this way).
+    monkeypatch.setenv("FENCE_CACHE_DIR", str(tmp_path / "cache"))
+    fx = FixtureRepo(tmp_path / "r")
+    fx.commit({"a.py": "class Repo:\n    pass\n", "b.py": "class Disk:\n    pass\n"},
+              "Add pieces\n\nThe cache is one file per repo because it holds private content.")
+    ctx = Context.open(fx.root)
+    index_repo(ctx.repo, ctx.store, ctx.cfg)
+    (d,) = why(ctx, "a.py").decisions
+    assert d.stated_reason is None and d.reason_scope == "change"
+    fx.commit({"a.py": "class Repo:\n    x = 1\n", "b.py": "class Disk:\n    x = 1\n"},
+              "Tidy\n\nRepo stays a plain class because subclasses broke pickling.")
+    index_repo(ctx.repo, ctx.store, ctx.cfg)
+    d = next(x for x in why(ctx, "a.py").decisions if x.stated_reason)
+    assert d.stated_reason.startswith("Repo stays a plain class") and d.grade == "B"

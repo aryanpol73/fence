@@ -34,6 +34,9 @@ class Scope:
     source_files: int  # source files the change touched (tests and docs excluded)
     names: frozenset[str]  # lower-case names that identify this code in prose
     other_files: frozenset[str] = frozenset()  # names of the change's other files
+    # Symbol names, matched with their exact case: code identifiers are case-sensitive,
+    # and a class `Repo` or method `load` is not mentioned by the words "repo" or "load".
+    symbols: frozenset[str] = frozenset()
 
 
 def _distinctive(ident: str) -> bool:
@@ -51,10 +54,8 @@ def build_scope(path: str, changed: list[tuple[str, int]], code_lines: list[str]
                if n > 0 and not test_pattern.search(p) and not match_any(p, low_signal)}
     focused = sources <= {path}
     names = _file_names(path)
-    for q in symbol_names:
-        for part in q.split("."):
-            if len(part) >= 4 and part != "<module>":
-                names.add(part.lower())
+    symbols = {part for q in symbol_names for part in q.split(".")
+               if len(part) >= 4 and part != "<module>"}
     for line in code_lines:
         for ident in _IDENT.findall(line):
             if _distinctive(ident):
@@ -63,7 +64,8 @@ def build_scope(path: str, changed: list[tuple[str, int]], code_lines: list[str]
     for p, _ in changed:
         if p != path:
             others |= _file_names(p)
-    return Scope(focused, len(sources), frozenset(names), frozenset(others - names))
+    return Scope(focused, len(sources), frozenset(names), frozenset(others - names),
+                 frozenset(symbols))
 
 
 def _file_names(path: str) -> set[str]:
@@ -74,9 +76,10 @@ def _file_names(path: str) -> set[str]:
     return out
 
 
-def mentions(sentence: str, names: frozenset[str]) -> bool:
+def mentions(sentence: str, names: frozenset[str], exact: frozenset[str] = frozenset()) -> bool:
     low = sentence.lower()
-    return any(re.search(rf"(?<!\w){re.escape(n)}(?!\w)", low) for n in names)
+    return (any(re.search(rf"(?<!\w){re.escape(n)}(?!\w)", low) for n in names)
+            or any(re.search(rf"(?<!\w){re.escape(n)}(?!\w)", sentence) for n in exact))
 
 
 def relevant_text(text: str, scope: Scope) -> str:
@@ -84,7 +87,7 @@ def relevant_text(text: str, scope: Scope) -> str:
     change, otherwise only the sentences that name this code."""
     if scope.focused:
         return text
-    return "\n\n".join(s for s in sentences(text) if mentions(s, scope.names))
+    return "\n\n".join(s for s in sentences(text) if mentions(s, scope.names, scope.symbols))
 
 
 def change_level_text(text: str, scope: Scope) -> str:
