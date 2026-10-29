@@ -32,17 +32,50 @@ _INJECTION = re.compile(
     r"as an ai)\b",
     re.IGNORECASE,
 )
-_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9`\"'(])|\n\s*\n|\n(?=\s*[-*] )")
+# Reasons that carry no causal word, each narrow enough not to fire on description:
+# - a result clause: "'now' is the commit time, so the same state scores the same."
+_RESULT = re.compile(r",\s+so\s+(?!far\b|on\b|forth\b)\w", re.IGNORECASE)
+# - a hazard: "an escape sequence would be executed by the reader's terminal."
+_HAZARD = re.compile(
+    r"\b(would|could|might)( otherwise| then)?( (be|get))? (executed|lost|corrupted|leaked|"
+    r"exposed|dropped|duplicated|overwritten|truncated|deleted|injected|bypassed|"
+    r"crash(es)?|fail|hang|deadlock|corrupt|leak)\b",
+    re.IGNORECASE,
+)
+# - a consequence of the previous sentence: "... Fence would explain the wrong code. So
+#   every removed range is compared first." It is quoted together with that sentence.
+_CONSEQUENCE = re.compile(
+    r"^(so(?! far\b)|hence|therefore|thus|that is why|this is why|that's why|"
+    r"for (this|that) reason)\b",
+    re.IGNORECASE,
+)
+_PARAGRAPH_SPLIT = re.compile(r"\n\s*\n|\n(?=\s*[-*] )")
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9`\"'(])")
+
+
+def paragraphs(text: str) -> list[list[str]]:
+    """Sentences grouped by paragraph or bullet item. Neighbours in one paragraph are
+    each other's context; sentences in different paragraphs are unrelated."""
+    out: list[list[str]] = []
+    for para in _PARAGRAPH_SPLIT.split(text or ""):
+        group = []
+        for block in _SENTENCE_SPLIT.split(para):
+            s = " ".join(block.split())  # join wrapped lines
+            s = s.lstrip("-* ").strip()
+            if s and not _TRAILER.match(s) and not _REVERT_LINE.match(s):
+                group.append(s)
+        if group:
+            out.append(group)
+    return out
 
 
 def sentences(text: str) -> list[str]:
-    out: list[str] = []
-    for block in _SENTENCE_SPLIT.split(text or ""):
-        s = " ".join(block.split())  # join wrapped lines
-        s = s.lstrip("-* ").strip()
-        if s and not _TRAILER.match(s) and not _REVERT_LINE.match(s):
-            out.append(s)
-    return out
+    return [s for para in paragraphs(text) for s in para]
+
+
+def states_reason(sentence: str) -> bool:
+    return bool(_REASON.search(sentence) or _RESULT.search(sentence)
+                or _HAZARD.search(sentence))
 
 
 def is_injection(sentence: str) -> bool:
@@ -55,11 +88,15 @@ def stated_reason(text: str) -> str | None:
     Which text is about which code is decided before this call (see relevance.py);
     this function only finds the reason sentence.
     """
-    for s in sentences(text):
-        if is_injection(s):
-            continue
-        if _REASON.search(s):
-            return clean(s, max_len=MAX_QUOTE)
+    for para in paragraphs(text):
+        for i, s in enumerate(para):
+            if is_injection(s):
+                continue
+            if states_reason(s):
+                return clean(s, max_len=MAX_QUOTE)
+            if i and _CONSEQUENCE.match(s) and not is_injection(para[i - 1]):
+                # Still verbatim: the two sentences are adjacent in the source.
+                return clean(f"{para[i - 1]} {s}", max_len=MAX_QUOTE)
     return None
 
 

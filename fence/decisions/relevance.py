@@ -18,7 +18,7 @@ import re
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
-from fence.decisions.reasons import sentences
+from fence.decisions.reasons import paragraphs, sentences
 from fence.globs import match_any
 
 # File stems too generic to identify a file when they appear in prose.
@@ -37,6 +37,10 @@ class Scope:
     # Symbol names, matched with their exact case: code identifiers are case-sensitive,
     # and a class `Repo` or method `load` is not mentioned by the words "repo" or "load".
     symbols: frozenset[str] = frozenset()
+    # The file's bare stem ("text" for fence/text.py). Usually an ordinary word, so it
+    # names the code only in its own sentence, never the sentences after it, unless it
+    # is written as code (`text`, fence.text, text.clean).
+    stems: frozenset[str] = frozenset()
 
 
 def _distinctive(ident: str) -> bool:
@@ -54,7 +58,9 @@ def build_scope(path: str, changed: list[tuple[str, int]], code_lines: list[str]
                if n > 0 and not test_pattern.search(p) and not match_any(p, low_signal)}
     focused = sources <= {path}
     names = _file_names(path)
-    symbols = {part for q in symbol_names for part in q.split(".")
+    stems = {n for n in names if "." not in n}
+    names -= stems
+    symbols ={part for q in symbol_names for part in q.split(".")
                if len(part) >= 4 and part != "<module>"}
     for line in code_lines:
         for ident in _IDENT.findall(line):
@@ -64,8 +70,8 @@ def build_scope(path: str, changed: list[tuple[str, int]], code_lines: list[str]
     for p, _ in changed:
         if p != path:
             others |= _file_names(p)
-    return Scope(focused, len(sources), frozenset(names), frozenset(others - names),
-                 frozenset(symbols))
+    return Scope(focused, len(sources), frozenset(names), frozenset(others - names - stems),
+                 frozenset(symbols), frozenset(stems))
 
 
 def _file_names(path: str) -> set[str]:
@@ -82,12 +88,41 @@ def mentions(sentence: str, names: frozenset[str], exact: frozenset[str] = froze
             or any(re.search(rf"(?<!\w){re.escape(n)}(?!\w)", sentence) for n in exact))
 
 
+def _as_code(sentence: str, stems: frozenset[str]) -> bool:
+    """A stem written as code: in backticks, or joined to a path or dotted name."""
+    low = sentence.lower()
+    return any(re.search(rf"`{re.escape(n)}`|[\w/][./]{re.escape(n)}(?!\w)|"
+                         rf"(?<![\w.]){re.escape(n)}\.\w", low) for n in stems)
+
+
 def relevant_text(text: str, scope: Scope) -> str:
     """The part of `text` that is evidence for this code: all of it for a focused
     change, otherwise only the sentences that name this code."""
     if scope.focused:
         return text
-    return "\n\n".join(s for s in sentences(text) if mentions(s, scope.names, scope.symbols))
+    # A sentence right after one that names this code, in the same paragraph, continues
+    # it ("fence/text.py strips escapes. Commit messages are attacker-controlled, ...")
+    # unless it names another file in the change. A bare stem ("uses text labels") counts
+    # for its own sentence only. Runs stay joined so a quote built from adjacent
+    # sentences is still verbatim.
+    runs: list[str] = []
+    for para in paragraphs(text):
+        run: list[str] = []
+        for s in para:
+            if mentions(s, scope.names, scope.symbols) or _as_code(s, scope.stems):
+                run.append(s)
+                continue
+            if run and not mentions(s, scope.other_files):
+                run.append(s)
+                continue
+            if run:
+                runs.append(" ".join(run))
+                run = []
+            if mentions(s, scope.stems):
+                runs.append(s)
+        if run:
+            runs.append(" ".join(run))
+    return "\n\n".join(runs)
 
 
 def change_level_text(text: str, scope: Scope) -> str:
