@@ -54,7 +54,7 @@ in the normal suite exercises it, or it was run by hand and the output checked.
 | 6. Common-word names | Partly fixed: a bare stem no longer extends to later sentences. Remaining limit pinned by `test_known_limit_other_files_common_word_stem_blocks_change_context` |
 | 7. Grade A live validation | Test added, skipped by default. Not run (no token in this session) |
 | 8. Eval results in repo | Done: `evals/results/requests-before-after/` with reproduce commands |
-| 9. Packaging and docs | Implemented. Distribution `gitfence` (commands `fence` and `gitfence`). Clean-venv `pip install` of the wheel verified on Windows; CI's package job passed on Windows, macOS and Linux at 3e01144. Trusted Publishing workflow added; it has not run yet, and no release is published |
+| 9. Packaging and docs | Implemented. Distribution `gitfence` (commands `fence` and `gitfence`). Clean-venv `pip install` of the wheel verified on Windows; CI's package job passed on Windows, macOS and Linux at 3e01144. Released: gitfence 0.1.0 on PyPI via Trusted Publishing (tag v0.1.0 = a6db4e4), and a fresh `pip install gitfence==0.1.0` runs `fence` and `gitfence`. CI's macOS package job on a6db4e4 was cancelled in the queue, not failed, and has not been re-run |
 
 ## Partial
 

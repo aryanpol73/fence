@@ -15,18 +15,19 @@ only for GitHub enrichment. It sends no telemetry.
 The project is called Fence; its package name is **gitfence**. Installing it gives two
 equivalent commands, `fence` and `gitfence`, and the Python import is `fence`.
 
-Install (Python 3.12+ and git on `PATH`). The `gitfence` package is not on PyPI yet
-(once it is: `pip install gitfence`), so install from GitHub:
+Install from PyPI (Python 3.12+ and git on `PATH`):
 
 ```bash
-uv tool install git+https://github.com/aryanpol73/fence
+uv tool install gitfence
 ```
 
 Or with pip, in a virtual environment:
 
 ```bash
-pip install git+https://github.com/aryanpol73/fence
+pip install gitfence
 ```
+
+The latest unreleased code installs with `pip install git+https://github.com/aryanpol73/fence`.
 
 Then, in any git repository:
 
@@ -225,7 +226,7 @@ errors. With the [pre-commit](https://pre-commit.com) framework instead:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/aryanpol73/fence
-    rev: main  # pin a tag once v0.1.0 is published
+    rev: v0.1.0
     hooks:
       - id: fence-check
 ```
