@@ -39,6 +39,23 @@ What is done, partial, or not done, each with the reason. Kept accurate to the c
 - **D8 orphaned evidence:** rewritten commits and PRs or issues that cannot be fetched are
   marked as such.
 
+## Release-readiness audit (2026-10-29)
+
+Each item from the completion brief, after this session's work. "Verified" means a test
+in the normal suite exercises it, or it was run by hand and the output checked.
+
+| Item | Status |
+|---|---|
+| 1. Core `why`/`check`, text/markdown/JSON, CLI/MCP parity | Implemented + verified. `why --format markdown` added; parity tests in `tests/test_edge_cases.py` |
+| 2. Local git mandatory; GitHub optional, offline mode, caching, rate limits | Implemented + verified against recorded responses. **Live GitHub unverified**: `tests/test_github_live.py` exists, opt-in, not yet run |
+| 3. Python + JS/TS/Go/Java via `LanguagePlugin`, text fallback | Implemented + verified (`tests/test_lang.py`; `why README.md` works) |
+| 4. MCP stdio, git hooks, pre-commit framework hook, GitHub Action, `fence.toml` | Implemented + verified, except the Action and the pre-commit framework hook, which were not run in a real PR or `pre-commit` install |
+| 5. Reasons without causal words | Implemented + verified: result clause, hazard, consequence sentence; +106/1,053 on 33k messages, 50 hand-checked |
+| 6. Common-word names | Partly fixed: a bare stem no longer extends to later sentences. Remaining limit pinned by `test_known_limit_other_files_common_word_stem_blocks_change_context` |
+| 7. Grade A live validation | Test added, skipped by default. Not run (no token in this session) |
+| 8. Eval results in repo | Done: `evals/results/requests-before-after/` with reproduce commands |
+| 9. Packaging and docs | Implemented. Clean-venv `pip install` of the wheel verified on Windows. Install from GitHub, and the macOS/Linux CI jobs, not yet run |
+
 ## Partial
 
 - **Risk scoring: experimental, lift not established.** The pooled backtest covers 11
@@ -60,9 +77,10 @@ What is done, partial, or not done, each with the reason. Kept accurate to the c
   re-run since. attrs is missing from the pooled set (its clone failed).
 - **Evidence scoping is lexical.** Commit, PR and issue sentences count for code only if
   they name the file, a symbol in the span or a distinctive identifier. Sentences that
-  describe the code in other words are treated as change-level (grade C). A 14-target
-  audit of this repo found 1 such over-cautious case. 3 more came from reason sentences
-  without a causal marker, which is a reason-detection limit, not a scoping one.
+  describe the code in other words are treated as change-level (grade C). The sentence
+  right after a naming sentence, in the same paragraph, counts too. A 14-target audit of
+  this repo found 4 over-cautious cases. All 4 (obsolete.py, text.py, trace.py,
+  strength.py) are now grade B with the correct quote.
 - **`check` latency** is 0.7-0.9s median and 2.0-2.8s p90 per commit on Windows (500-commit
   backtests). It can go over the 2-3s target on larger diffs, because line-history walks
   run once per decision. Hook mode skips them.

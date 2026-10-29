@@ -1,0 +1,10 @@
+# For the pre-commit framework (https://pre-commit.com). Warns before a commit removes or
+# weakens code with recorded reasons; exits 3 on an un-acknowledged KEEP, fails open on
+# errors. Same behaviour as `fence hook install`.
+- id: fence-check
+  name: fence check (staged)
+  entry: fence check --staged --hook
+  language: python
+  pass_filenames: false
+  always_run: true
+  stages: [pre-commit]

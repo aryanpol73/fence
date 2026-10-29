@@ -12,9 +12,20 @@ only for GitHub enrichment. It sends no telemetry.
 
 ## Quickstart (2 minutes)
 
+Install (Python 3.12+ and git on `PATH`). Fence is not on PyPI yet, so install from
+GitHub:
+
 ```bash
 uv tool install git+https://github.com/aryanpol73/fence
 ```
+
+Or with pip, in a virtual environment:
+
+```bash
+pip install git+https://github.com/aryanpol73/fence
+```
+
+Then, in any git repository:
 
 ```bash
 cd your-repo && fence index
@@ -23,6 +34,9 @@ cd your-repo && fence index
 ```bash
 fence why src/payments/client.py:42
 ```
+
+`fence why` takes `FILE`, `FILE:LINE`, `FILE:START-END` or `--symbol NAME`, and
+`--format text|json|markdown` (`--json` is short for `--format json`).
 
 ```bash
 fence check
@@ -158,6 +172,9 @@ Register Fence as an MCP server. For Claude Code:
 claude mcp add fence -- fence mcp
 ```
 
+Claude Desktop, Cursor and other clients, the full tool reference and a manual check are
+in [docs/mcp.md](docs/mcp.md).
+
 The tools are `why`, `check` and `list_fences`, plus `acknowledge` when
 `mcp.write_tools_enabled = true`. Responses are compact JSON trimmed to about 1.5k tokens;
 `detail: "full"` expands them. In **guardrail mode**, a `check` response that touches a
@@ -199,7 +216,16 @@ fence hook install --pre-push
 ```
 
 The hooks are fast, never index, print nothing when the check is clear, and fail open on
-errors.
+errors. With the [pre-commit](https://pre-commit.com) framework instead:
+
+```yaml
+# .pre-commit-config.yaml
+repos:
+  - repo: https://github.com/aryanpol73/fence
+    rev: main  # pin a tag once v0.1.0 is published
+    hooks:
+      - id: fence-check
+```
 
 ## Other commands
 
@@ -296,12 +322,23 @@ about 0.4s, and a 10-file `check` about 2s.
   C). One that names an identifier the code merely uses can still count as specific.
   Another file's name that is also a common word (`text.py`, `fence.toml`) keeps a
   sentence containing that word from being used as change-level context.
-- A reason is recognised only by a causal marker ("because", "since", "so that",
-  "so … cannot", …). An explanation in the next sentence, or a plain result clause
-  ("…, so the same state scores the same"), is missed, and the code is graded C or D.
+- A reason is recognised by a causal word ("because", "since", "so that"), a result
+  clause (", so …"), a hazard ("… would be executed / lost / corrupted"), or a sentence
+  starting "So", "Hence" or "That is why", which is quoted with the sentence before it.
+  A reason phrased any other way is missed, and the code is graded C or D. On 33,022
+  commit messages from the eval repos, these forms added 106 stated reasons to 1,053.
+  A hand check of 50 of the additions found no false positives, but the full set was not
+  labelled.
+- A file's bare stem in prose ("uses text labels" for `text.py`) counts as naming that
+  file in its own sentence. Such a sentence can lend `text.py` a constraint or reason that
+  is not about it. The sentences after it are not attached unless the file is named as
+  code (`text.py`, `` `text` ``, `fence.text`).
 - The backtest's regret labels (reverted, or the same code re-added in the same file) are a
   noisy, lower-bound proxy for "risky removal".
 - Without `GITHUB_TOKEN`, grade A is unreachable (local-git mode), and `fence doctor` says so.
+  Grade A is tested against recorded GitHub responses. The live test
+  (`FENCE_LIVE_GITHUB=1 GITHUB_TOKEN=… uv run pytest tests/test_github_live.py`) exists but
+  has not yet been run, so live GitHub behaviour is unverified.
 - Rebase-merged PRs map to their PR only through the GitHub API.
 - Symbol anchors cover Python, JS/TS, Go and Java. Other languages get file and line anchors,
   with a notice.
@@ -309,6 +346,10 @@ about 0.4s, and a 10-file `check` about 2s.
   Developer Mode.
 - Not built: the LLM synthesis pass, the web view, GitLab/Bitbucket, and full regression echo
   (D4). See STATUS.md.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 

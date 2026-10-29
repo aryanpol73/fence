@@ -4,6 +4,16 @@ All notable changes to Fence. Versions follow semantic versioning.
 
 ## 0.1.0 (unreleased)
 
+### Release readiness
+
+- Reasons stated without a causal word are recognised: result clauses (", so …"), hazards ("… would be executed"), and consequence sentences ("So …", "Hence …"), which are quoted with the sentence before them.
+- The sentence right after one that names the code, in the same paragraph, counts for that code. A bare file stem ("text") names its own sentence only.
+- `fence why --format text|json|markdown`. Markdown carries the same fields as text, and quoted reasons no longer swallow the lines after them. `why` text output shows the experimental score note.
+- `.pre-commit-hooks.yaml` for the pre-commit framework, `docs/mcp.md`, `CONTRIBUTING.md`.
+- The version is single-sourced from `fence/__init__.py`. CI pip-installs the wheel on Windows, macOS and Linux.
+- Opt-in live GitHub test (`tests/test_github_live.py`), skipped by default.
+- `evals/reason_markers.py` measures reason-detection changes offline. The requests before/after backtest is kept in `evals/results/requests-before-after/`.
+
 ### Edge cases and honest scores
 
 - Symbol names match commit prose only with their exact case. A class `Repo` is no longer "named" by the word "repo".
