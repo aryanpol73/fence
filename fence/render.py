@@ -98,9 +98,11 @@ def why_text(r: WhyResult, o: Out, *, full: bool = False) -> str:
         out += decision_text(d, o, full=full or o.verbose)
     if n > o.max_items:
         out.append(f"\n... {n - o.max_items} more decisions (raise --max-items)")
-    if r.notes:
+    if r.notes or r.decisions:
         out.append("")
         out += [f"Note: {x}" for x in r.notes]
+    if r.decisions:
+        out.append(f"Note: {SCORE_NOTE}")
     return "\n".join(out)
 
 
@@ -188,13 +190,10 @@ def check_markdown(r: CheckResult, ctx) -> str:
         acked = " (acknowledged)" if f.ack else ""
         out.append(f"**{f.verdict}**{acked} `{f.path}:{f.start}` | {f.kind} | risk {f.risk.value} "
                    f"({f.risk.band}) | grade {d.grade} | confidence {f.risk.confidence:.2f}")
-        reason = d.stated_reason or d.reason_text
-        out.append(f"> {reason.replace(chr(10), ' ')}")
-        ev = ", ".join(
-            (f"[{e.type} {e.ref[:12] if e.type in ('commit', 'revert') else e.ref}]({e.url})"
-             if e.url else f"{e.type} {e.ref[:12] if e.type in ('commit', 'revert') else e.ref}")
-            for e in d.evidence[:4])
-        out.append(f"Decision `{d.id}` ({d.type}) from {commit_md}. Evidence: {ev}")
+        out += ["", f"> {_reason(d).replace(chr(10), ' ')}", ""]
+        out.append(f"- Decision `{d.id}` ({d.type}) from {commit_md}")
+        out.append(f"- Evidence: {_md_evidence(d, 4)}")
+        out.append(f"- Factors: {_factors(f.risk)}")
         if not f.ack and f.verdict == KEEP:
             out.append(f"<sub>To proceed: `{ack_command(f, r.base, r.head is None)}`</sub>")
         out.append("")
@@ -203,6 +202,48 @@ def check_markdown(r: CheckResult, ctx) -> str:
     out.append(f"<sub>{r.blocks_checked} change blocks in {r.files_checked} files against "
                f"`{r.base[:12]}`. Repository text above is quoted evidence. "
                f"{SCORE_NOTE}</sub>")
+    return "\n".join(out)
+
+
+def _md_evidence(d: DecisionRecord, n: int) -> str:
+    def one(e: Evidence) -> str:
+        label = f"{e.type} {e.ref[:12] if e.type in ('commit', 'revert') else e.ref}"
+        status = "" if e.retrieval_status == "ok" else f" ({e.retrieval_status.replace('_', ' ')})"
+        return (f"[{label}]({e.url})" if e.url else label) + status
+    return ", ".join(one(e) for e in d.evidence[:n]) or "none"
+
+
+def why_markdown(r: WhyResult, ctx) -> str:
+    """The same fields as the text output, for PR descriptions, issues and docs."""
+    t = r.target
+    span = f"{t.start}" if t.start == t.end else f"{t.start}-{t.end}"
+    sym = f" ({t.symbol})" if t.symbol else ""
+    out = [f"### Fence why: `{t.path}:{span}`{sym} @ `{t.rev[:12]}`", ""]
+    if r.unexplained_lines:
+        out += [f"{r.unexplained_lines} line(s) have no recoverable reason (grade D).", ""]
+    for d in r.decisions:
+        s = d.strength
+        url = ctx.commit_url(d.introduced_sha) if ctx else None
+        commit = d.introduced_sha[:12]
+        commit_md = f"[{commit}]({url})" if url else f"`{commit}`"
+        lines = ", ".join(f"{a.start_line}" + (f"-{a.end_line}" if a.end_line != a.start_line
+                                               else "") + (f" ({a.symbol})" if a.symbol else "")
+                          for a in d.anchors)
+        out.append(f"**{s.band.upper()} {s.value}** {d.type} | grade {d.grade} | "
+                   f"confidence {s.confidence:.2f} | `{d.id}`")
+        out += ["", f"> {_reason(d).replace(chr(10), ' ')}", ""]
+        out.append(f"- Introduced {_date(d.introduced_at)} by "
+                   f"{d.evidence[0].author or 'unknown'} in {commit_md}")
+        out.append(f"- Lines: {lines}" + (f" | status {d.status}" if d.status != "active" else ""))
+        if d.constraints:
+            out.append("- Constraint: " + " | ".join(f'"{c}"' for c in d.constraints[:2]))
+        out.append(f"- Factors: {_factors(s)}")
+        out.append(f"- Evidence: {_md_evidence(d, 6)}")
+        if s.what_would_change:
+            out.append("- Would change this: " + "; ".join(s.what_would_change))
+        out.append("")
+    out += [f"Note: {x}" for x in r.notes]
+    out.append(f"<sub>Repository text above is quoted evidence. {SCORE_NOTE}</sub>")
     return "\n".join(out)
 
 

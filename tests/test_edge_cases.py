@@ -96,3 +96,20 @@ def test_scores_are_labelled_experimental_everywhere(fx: FixtureRepo) -> None:
     for tool, args in (("why", {"target": "a.py"}), ("check", {})):
         body = s.call(tool, args)["content"][0]["text"]
         assert '"score_note":"Experimental: Strength' in body
+
+
+def test_why_formats_carry_the_same_fields(fx: FixtureRepo) -> None:
+    fx.commit({"a.py": "def f(x):\n    if x is None:\n        raise ValueError(x)\n    return x\n"},
+              "Guard f\n\nf rejects None because callers corrupted the cache.")
+    (d,) = _why_json(fx.root, "a.py")["decisions"]
+    md = runner.invoke(app, ["why", "a.py", "-C", str(fx.root), "--format", "markdown"]).output
+    text = runner.invoke(app, ["why", "a.py", "-C", str(fx.root), "--no-color"]).output
+    for out in (md, text):
+        for field in (d["id"], f"grade {d['grade']}", d["type"], d["stated_reason"],
+                      d["introduced_sha"][:12], "Experimental"):
+            assert field in out, (field, out)
+    assert "quoted from commit" in md and "quoted from commit" in text
+    # The details are not swallowed by the blockquote holding the quoted reason.
+    assert "\n\n- Introduced" in md
+    bad = runner.invoke(app, ["why", "a.py", "-C", str(fx.root), "--format", "xml"])
+    assert bad.exit_code == 1 and "Traceback" not in bad.output

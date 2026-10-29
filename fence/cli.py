@@ -22,7 +22,7 @@ from fence.index.formatting import detect_format_only
 from fence.index.indexer import index_repo, needs_index
 from fence.index.store import IndexUnavailable, db_path_for
 from fence.policy import acks as ackmod
-from fence.render import Out, check_json, check_text, dumps, why_json, why_text
+from fence.render import Out, check_json, check_text, dumps, why_json, why_markdown, why_text
 
 app = typer.Typer(add_completion=False, no_args_is_help=True,
                   help="Fence: know why code exists before you remove it.")
@@ -155,10 +155,14 @@ def why_cmd(
     newest: Annotated[bool, typer.Option("--newest", help="Newest first, not strongest.")] = False,
     repo: RepoOpt = Path("."), json_out: JsonOpt = False, quiet: QuietOpt = False,
     no_color: NoColorOpt = False, verbose: VerboseOpt = False,
+    fmt: Annotated[str, typer.Option("--format", help="text | json | markdown")] = "text",
 ) -> None:
     """Why does this code exist? Evidence-backed, graded decision records."""
+    if fmt not in ("text", "json", "markdown"):
+        raise _fail(f"unknown --format {fmt!r}: use text, json or markdown")
+    fmt = "json" if json_out else fmt
     ctx = _open(repo)
-    _ensure_indexed(ctx, quiet or json_out)
+    _ensure_indexed(ctx, quiet or fmt != "text")
     path, start, end = parse_target(target)
     try:
         res = why(ctx, path, start, end, symbol=symbol, rev=rev)
@@ -168,7 +172,8 @@ def why_cmd(
         res.decisions.sort(key=lambda d: (-d.introduced_at, d.id))
     if quiet:
         return
-    typer.echo(dumps(why_json(res)) if json_out else why_text(res, _out(ctx, no_color, verbose)))
+    typer.echo(dumps(why_json(res)) if fmt == "json" else why_markdown(res, ctx)
+               if fmt == "markdown" else why_text(res, _out(ctx, no_color, verbose)))
 
 
 @app.command("explain")
