@@ -286,7 +286,7 @@ def hook_cmd(
     # Git runs hooks with its own sh and PATH. On Windows a venv's Scripts folder is often
     # not on it, and a hook that silently found no fence would check nothing. So record
     # the fence that installed the hook, fall back to PATH, and say so when neither exists.
-    running = Path(sys.argv[0]).stem in ("fence", "codefence")
+    running = Path(sys.argv[0]).stem in ("fence", "gitfence")
     exe = (shutil.which(sys.argv[0]) if running else None) or shutil.which("fence") or ""
     exe = Path(exe).resolve().as_posix().replace("'", "'\\''") if exe else ""
     for name, cmd in scripts.items():
