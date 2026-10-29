@@ -19,7 +19,7 @@ from fence.context import Context
 from fence.decisions.build import WhyError, why
 from fence.git.runner import GitError
 from fence.index.formatting import detect_format_only
-from fence.index.indexer import index_repo
+from fence.index.indexer import index_repo, needs_index
 from fence.index.store import IndexUnavailable, db_path_for
 from fence.policy import acks as ackmod
 from fence.render import Out, check_json, check_text, dumps, why_json, why_text
@@ -74,10 +74,13 @@ def parse_target(target: str) -> tuple[str, int | None, int | None]:
 
 
 def _ensure_indexed(ctx: Context, quiet: bool) -> None:
-    """First-run convenience: index automatically so `fence why` works in one step."""
-    if ctx.store.commit_count(include_orphaned=True) == 0:
+    """Index first when needed, so `fence why` works in one step and never explains new
+    commits from their subject line alone."""
+    if needs_index(ctx.repo, ctx.store, ctx.cfg):
         if not quiet:
-            typer.echo("fence: no index yet; indexing history first...", err=True)
+            empty = ctx.store.commit_count(include_orphaned=True) == 0
+            typer.echo("fence: no index yet; indexing history first..." if empty
+                       else "fence: indexing new commits...", err=True)
         index_repo(ctx.repo, ctx.store, ctx.cfg, detect_format=detect_format_only)
 
 

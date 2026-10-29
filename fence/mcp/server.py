@@ -22,10 +22,10 @@ from fence.check.engine import KEEP, check
 from fence.config import BANDS
 from fence.context import Context
 from fence.decisions.build import WhyError, why
-from fence.decisions.model import DecisionRecord
+from fence.decisions.model import SCORE_NOTE, DecisionRecord
 from fence.git.runner import GitError
 from fence.index.formatting import detect_format_only
-from fence.index.indexer import index_repo
+from fence.index.indexer import index_repo, needs_index
 from fence.policy import acks as ackmod
 
 PROTOCOL_VERSION = "2025-06-18"
@@ -87,6 +87,7 @@ def _brief(d: DecisionRecord, full: bool) -> dict:
     out: dict[str, Any] = {
         "id": d.id, "strength": d.strength.value, "band": d.strength.band, "grade": d.grade,
         "confidence": d.strength.confidence, "type": d.type, "reason": d.reason_text,
+        "reason_scope": d.reason_scope,
         "lines": [[a.start_line, a.end_line] for a in d.anchors],
         "commit": d.introduced_sha[:12],
         "top_factors": [f.reason for f in d.strength.top()],
@@ -111,10 +112,13 @@ class Server:
     def ctx(self) -> Context:
         if self._ctx is None:
             self._ctx = Context.open(self.repo)
-            if self._ctx.store.commit_count(include_orphaned=True) == 0:
-                index_repo(self._ctx.repo, self._ctx.store, self._ctx.cfg,
-                           detect_format=detect_format_only)
         return self._ctx
+
+    def refresh(self) -> None:
+        """Index new commits before a tool runs, so answers never rest on a stale index."""
+        ctx = self.ctx
+        if needs_index(ctx.repo, ctx.store, ctx.cfg):
+            index_repo(ctx.repo, ctx.store, ctx.cfg, detect_format=detect_format_only)
 
     def tools(self) -> list[dict]:
         return TOOLS + ([ACK_TOOL] if self.ctx.cfg.mcp.write_tools_enabled else [])
@@ -131,7 +135,7 @@ class Server:
         body = {"target": f"{res.target.path}:{res.target.start}-{res.target.end}",
                 "symbol": res.target.symbol,
                 "decisions": [_brief(d, full) for d in res.decisions],
-                "notes": res.notes, "note": UNTRUSTED}
+                "notes": res.notes, "note": UNTRUSTED, "score_note": SCORE_NOTE}
         strongest = res.decisions[0] if res.decisions else None
         prefix = ""
         if strongest and self._at_guardrail(strongest.strength.band) and strongest.grade != "D":
@@ -158,7 +162,7 @@ class Server:
             "decision": _brief(f.decision, full),
         } for f in res.findings]
         body = {"verdict": res.verdict, "exit_code": res.exit_code, "findings": findings,
-                "notes": res.notes, "note": UNTRUSTED}
+                "notes": res.notes, "note": UNTRUSTED, "score_note": SCORE_NOTE}
         stop = [f for f in res.findings if f.ack is None and f.decision.grade != "D"
                 and (f.verdict == KEEP or self._at_guardrail(f.risk.band))]
         prefix = ""
@@ -180,7 +184,8 @@ class Server:
         res = scan(self.ctx, str(args.get("path") or "."), max_files=200)
         items = [{"file": f, **_brief(d, False)} for f, d in res.decisions[:limit]]
         return self._fit({"path": res.path, "files_scanned": res.files_scanned,
-                          "fences": items, "notes": res.notes, "note": UNTRUSTED}, "fences")
+                          "fences": items, "notes": res.notes, "note": UNTRUSTED,
+                          "score_note": SCORE_NOTE}, "fences")
 
     def tool_acknowledge(self, args: dict) -> str:
         if not self.ctx.cfg.mcp.write_tools_enabled:
@@ -261,6 +266,7 @@ class Server:
             return {"content": [{"type": "text", "text": "arguments must be an object"}],
                     "isError": True}
         try:
+            self.refresh()
             text = handlers[name](args)
         except (ToolError, WhyError, DiffError, GitError, ackmod.AckError, KeyError,
                 ValueError) as e:

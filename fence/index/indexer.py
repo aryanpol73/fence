@@ -67,6 +67,14 @@ def resolve_tips(repo: Repo, refs: list[str]) -> dict[str, str]:
     return tips
 
 
+def needs_index(repo: Repo, store: Store, cfg: Config) -> bool:
+    """True when the index is empty or a configured tip has commits it has not seen,
+    such as new, amended or squashed commits since the last run."""
+    if store.commit_count(include_orphaned=True) == 0:
+        return True
+    return any(not store.has_commit(sha) for sha in resolve_tips(repo, cfg.index.refs).values())
+
+
 def is_ancestor(repo: Repo, old: str, new: str) -> bool:
     try:
         repo.run(["merge-base", "--is-ancestor", old, new])

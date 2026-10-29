@@ -79,6 +79,8 @@ def resolve_target(
         text = ctx.repo.read_blob(rev_sha, rel, max_bytes=ctx.cfg.index.max_file_size)
     except GitError as e:
         raise WhyError(f"cannot read {rel} at {rev}: {e}") from None
+    if "\0" in text:
+        raise WhyError(f"{rel} is a binary file; Fence explains text lines only")
     total = len(text.splitlines())
     if total == 0:
         raise WhyError(f"{rel} is empty at {rev}")
@@ -363,7 +365,10 @@ def _record(
     if not stated and (q := reasons.stated_reason(rel_message)):
         stated, stated_ev, grade = q, commit_ev.id, "B"
     # A reason the change states for itself, not shown to be about this code.
-    change_reason = None if scope.focused else reasons.stated_reason(
+    # A shallow clone's boundary commit only marks where history stops: it did not add
+    # these lines, so its message is no evidence for them.
+    cutoff = ctx.shallow and first.boundary
+    change_reason = None if scope.focused or cutoff else reasons.stated_reason(
         relevance.change_level_text(message, scope))
     constraints += reasons.constraints(rel_message)
     alternatives += reasons.alternatives(rel_message)
