@@ -1,8 +1,6 @@
 import json
 from pathlib import Path
 
-import pytest
-
 from fence.scoring import calibration
 from fence.scoring.calibration import MIN_BIN, MIN_POSITIVE, fit, load
 
@@ -34,15 +32,10 @@ def test_fit_with_no_regrets_is_one_flat_bin() -> None:
     assert (b.risk_min, b.risk_max, b.rate) == (0, 100, 0.0)
 
 
-def test_shipped_table_is_monotonic_and_supported() -> None:
-    bins, prov = load()
-    if not bins:
-        pytest.skip("no calibration table shipped")
-    rates = [b.rate for b in bins]
-    assert all(a < b for a, b in zip(rates, rates[1:], strict=False))
-    assert all(b.n >= MIN_BIN for b in bins)
-    assert prov["fitted_on"] and "express" not in " ".join(prov["fitted_on"])  # held out
-    assert calibration.lookup(0) is not None and calibration.lookup(100) is not None
+def test_no_table_ships_so_findings_carry_no_probability() -> None:
+    # The pooled backtest did not support a regret-rate table (DECISIONS.md, 2026-10-29).
+    assert load() == ((), {})
+    assert calibration.lookup(0) is None and calibration.lookup(100) is None
 
 
 def test_main_writes_table(tmp_path: Path) -> None:

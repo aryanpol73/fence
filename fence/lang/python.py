@@ -6,6 +6,7 @@ from __future__ import annotations
 import ast
 import io
 import tokenize
+import warnings
 
 from fence.lang import Symbol, normalize_string_literal
 
@@ -22,7 +23,11 @@ class PythonPlugin:
 
     def symbols(self, source: str) -> list[Symbol] | None:
         try:
-            tree = ast.parse(source)
+            # Old code is often valid but deprecated (invalid escapes): parsing it must
+            # not print SyntaxWarnings into Fence's output.
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", SyntaxWarning)
+                tree = ast.parse(source)
         except (SyntaxError, ValueError):
             return None
         out: list[Symbol] = []

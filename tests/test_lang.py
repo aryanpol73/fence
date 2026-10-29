@@ -139,3 +139,14 @@ def test_fingerprint_roundtrip() -> None:
     from fence.anchors.fingerprint import Fingerprint
 
     assert Fingerprint.from_json(fp.to_json()) == fp
+
+
+def test_python_with_invalid_escapes_parses_silently() -> None:
+    import warnings
+
+    from fence.lang.python import PythonPlugin
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")  # any warning fails the test
+        syms = PythonPlugin().symbols('import re\n\ndef f():\n    return re.compile("\\d+")\n')
+    assert [s.qualname for s in syms] == ["f"]
