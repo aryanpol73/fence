@@ -1,5 +1,5 @@
 [project]
-name = "fence"
+name = "codefence"  # distribution name; the import package and CLI stay `fence`
 dynamic = ["version"]  # single source: fence/__init__.py
 description = "Records why code exists and warns before it is removed."
 readme = "README.md"
@@ -31,6 +31,7 @@ dependencies = [
 
 [project.scripts]
 fence = "fence.cli:app"
+codefence = "fence.cli:app"
 
 [project.urls]
 Homepage = "https://github.com/aryanpol73/fence"

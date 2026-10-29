@@ -42,5 +42,6 @@ jobs:
           bin="$RUNNER_TEMP/v/bin"; [ -d "$bin" ] || bin="$RUNNER_TEMP/v/Scripts"
           "$bin/python" -m pip install dist/*.whl
           "$bin/fence" version
+          "$bin/codefence" version
           "$bin/fence" why fence/git/runner.py:1 --no-color | head -5
           "$bin/fence" why fence/git/runner.py:1 --format markdown | head -3

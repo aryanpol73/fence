@@ -12,8 +12,11 @@ only for GitHub enrichment. It sends no telemetry.
 
 ## Quickstart (2 minutes)
 
-Install (Python 3.12+ and git on `PATH`). Fence is not on PyPI yet, so install from
-GitHub:
+The project is called Fence; its package name is **codefence**. Installing it gives two
+equivalent commands, `fence` and `codefence`, and the Python import is `fence`.
+
+Install (Python 3.12+ and git on `PATH`). The `codefence` package is not on PyPI yet
+(once it is: `pip install codefence`), so install from GitHub:
 
 ```bash
 uv tool install git+https://github.com/aryanpol73/fence
