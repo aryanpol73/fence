@@ -8,7 +8,8 @@ Publishing. No API token is involved.
 
 1. On PyPI, add a trusted publisher for `gitfence`: owner `aryanpol73`, repository `fence`,
    workflow `publish.yml`, environment `pypi`. Before the first upload, this is a
-   "pending publisher", which also reserves the name.
+   "pending publisher". It does **not** reserve the name: anyone can register the
+   project first, so publish soon after adding it. (Done for `gitfence` at 0.1.0.)
 2. On GitHub, create the environment `pypi` (Settings > Environments). Adding a required
    reviewer is recommended, so every publish waits for a human.
 

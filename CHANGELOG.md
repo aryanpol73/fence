@@ -2,7 +2,11 @@
 
 All notable changes to Fence. Versions follow semantic versioning.
 
-## 0.1.0 (unreleased)
+## Unreleased
+
+- Docs updated after the 0.1.0 release: PyPI install lines, the pre-commit `rev`, and the corrected note that a PyPI pending publisher does not reserve the name.
+
+## 0.1.0 (2026-10-29)
 
 ### Packaging
 
