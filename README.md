@@ -12,11 +12,11 @@ only for GitHub enrichment. It sends no telemetry.
 
 ## Quickstart (2 minutes)
 
-The project is called Fence; its package name is **codefence**. Installing it gives two
-equivalent commands, `fence` and `codefence`, and the Python import is `fence`.
+The project is called Fence; its package name is **gitfence**. Installing it gives two
+equivalent commands, `fence` and `gitfence`, and the Python import is `fence`.
 
-Install (Python 3.12+ and git on `PATH`). The `codefence` package is not on PyPI yet
-(once it is: `pip install codefence`), so install from GitHub:
+Install (Python 3.12+ and git on `PATH`). The `gitfence` package is not on PyPI yet
+(once it is: `pip install gitfence`), so install from GitHub:
 
 ```bash
 uv tool install git+https://github.com/aryanpol73/fence
@@ -176,7 +176,7 @@ claude mcp add fence -- fence mcp
 ```
 
 Claude Desktop, Cursor and other clients, the full tool reference and a manual check are
-in [docs/mcp.md](docs/mcp.md).
+in [docs/mcp.md](https://github.com/aryanpol73/fence/blob/main/docs/mcp.md).
 
 The tools are `why`, `check` and `list_fences`, plus `acknowledge` when
 `mcp.write_tools_enabled = true`. Responses are compact JSON trimmed to about 1.5k tokens;
@@ -352,7 +352,7 @@ about 0.4s, and a 10-file `check` about 2s.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](https://github.com/aryanpol73/fence/blob/main/CONTRIBUTING.md). Releases follow [RELEASING.md](https://github.com/aryanpol73/fence/blob/main/RELEASING.md).
 
 ## License
 

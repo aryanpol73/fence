@@ -4,6 +4,13 @@ All notable changes to Fence. Versions follow semantic versioning.
 
 ## 0.1.0 (unreleased)
 
+### Packaging
+
+- Published on PyPI as `gitfence` (`pip install gitfence`): `fence` was taken, and `codefence` already exists as an empty project. The import package and the `fence` command are unchanged, and `gitfence` is an equivalent command.
+- Releases publish from a pushed `v*` tag through PyPI Trusted Publishing (`.github/workflows/publish.yml`), with no API token. See `RELEASING.md`.
+- `fence why` no longer prints doubled quotes around a reason that starts or ends with a quote.
+- Git hooks record the absolute path of `fence`, and report on stderr when they cannot run it. Before this, on Windows they silently checked nothing when `fence` was not on Git's PATH.
+
 ### Release readiness
 
 - Reasons stated without a causal word are recognised: result clauses (", so …"), hazards ("… would be executed"), and consequence sentences ("So …", "Hence …"), which are quoted with the sentence before them.
