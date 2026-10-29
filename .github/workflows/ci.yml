@@ -21,14 +21,26 @@ jobs:
       - run: uv run --python ${{ matrix.python }} ruff check
       - run: uv run --python ${{ matrix.python }} pytest -q
   package:
-    runs-on: ubuntu-latest
+    # The built wheel must install with plain pip into a clean venv on every OS.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: astral-sh/setup-uv@v6
       - run: uv build
-      - run: |
-          python -m venv /tmp/v && /tmp/v/bin/pip install dist/*.whl
-          /tmp/v/bin/fence version
-          /tmp/v/bin/fence why fence/git/runner.py:1 --no-color | head -5
+      - run: uv venv --seed --python 3.12 "$RUNNER_TEMP/v"
+      - name: pip install the wheel and smoke-test it
+        run: |
+          bin="$RUNNER_TEMP/v/bin"; [ -d "$bin" ] || bin="$RUNNER_TEMP/v/Scripts"
+          "$bin/python" -m pip install dist/*.whl
+          "$bin/fence" version
+          "$bin/fence" why fence/git/runner.py:1 --no-color | head -5
+          "$bin/fence" why fence/git/runner.py:1 --format markdown | head -3

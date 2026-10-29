@@ -1,10 +1,23 @@
 [project]
 name = "fence"
-version = "0.1.0"
+dynamic = ["version"]  # single source: fence/__init__.py
 description = "Records why code exists and warns before it is removed."
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
+authors = [{ name = "Aryan Pol" }]
+keywords = ["git", "code-review", "provenance", "chestertons-fence", "mcp"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Quality Assurance",
+    "Topic :: Software Development :: Version Control :: Git",
+]
 dependencies = [
     "typer>=0.12",
     "unidiff>=0.7.5",
@@ -19,6 +32,11 @@ dependencies = [
 [project.scripts]
 fence = "fence.cli:app"
 
+[project.urls]
+Homepage = "https://github.com/aryanpol73/fence"
+Issues = "https://github.com/aryanpol73/fence/issues"
+Changelog = "https://github.com/aryanpol73/fence/blob/main/CHANGELOG.md"
+
 [dependency-groups]
 dev = [
     "pytest>=8",
@@ -29,8 +47,14 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.version]
+path = "fence/__init__.py"
+
 [tool.hatch.build.targets.wheel]
 packages = ["fence"]
+
+[tool.hatch.build.targets.sdist]
+exclude = ["/evals/results", "/dist", "/.github"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
