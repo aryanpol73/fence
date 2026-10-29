@@ -10,6 +10,11 @@ from dataclasses import asdict, dataclass, field
 from typing import Literal
 
 SCHEMA = "fence/v1"
+# Shown wherever Strength or Change Risk is output. The pooled backtest's lift
+# interval includes 1 (README, "Measured results"), so the scores claim no accuracy.
+SCORE_NOTE = ("Experimental: Strength and Change Risk are explained sums of evidence "
+              "factors, not probabilities. Backtests have not established that they "
+              "predict which removals are later regretted.")
 
 EvidenceType = Literal[
     "commit", "pr", "issue", "review_comment", "revert", "code_comment", "test", "ticket",
@@ -57,8 +62,8 @@ class Score:
     confidence: float
     factors: tuple[Factor, ...]
     what_would_change: tuple[str, ...] = ()
-    # Change Risk only: observed regret rate for this risk level in the shipped
-    # backtest calibration table, and how many blocks that rate rests on.
+    # Change Risk only: regret rate from a shipped calibration table and its support.
+    # No table ships (the pooled backtest did not support one), so both stay None.
     regret_rate: float | None = None
     regret_n: int | None = None
 

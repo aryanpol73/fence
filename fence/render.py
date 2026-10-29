@@ -16,7 +16,7 @@ import typer
 
 from fence.check.engine import CLEAR, KEEP, SAFE, VERIFY, CheckResult, Finding
 from fence.decisions.build import WhyResult
-from fence.decisions.model import SCHEMA, DecisionRecord, Evidence, Score
+from fence.decisions.model import SCHEMA, SCORE_NOTE, DecisionRecord, Evidence, Score
 
 _COLORS = {KEEP: "red", VERIFY: "yellow", CLEAR: "green", SAFE: "cyan",
            "critical": "red", "high": "red", "medium": "yellow", "low": "green"}
@@ -118,10 +118,6 @@ def finding_text(f: Finding, o: Out, base: str, head_is_base: bool) -> list[str]
     acked = " | ACKNOWLEDGED" if f.ack else ""
     lines = [f"{label} {f.path}:{span}  {f.kind}  risk {r.value} ({r.band}) | "
              f"evidence confidence {r.confidence:.2f} | grade {d.grade}{acked}"]
-    if r.regret_rate is not None:
-        lines.append(f"  Outcome: removals at this risk were later restored or reverted "
-                     f"{r.regret_rate:.0%} of the time (shipped backtest calibration, "
-                     f"n={r.regret_n}).")
     preview = f.removed_preview.split("\n")
     lines.append(f"  Change: {f.kind_reason}: " + preview[0].strip()
                  + (f" (+{len(preview) - 1} lines)" if len(preview) > 1 else ""))
@@ -164,6 +160,8 @@ def check_text(r: CheckResult, o: Out) -> str:
         out.append(f"Ghost fence: {path} re-adds code (similarity {g.similarity}) that was "
                    f"removed in {g.removed_in[:12]} \"{g.subject}\" from {g.path}.")
     out += [f"Note: {x}" for x in r.notes]
+    if r.findings:
+        out.append(f"Note: {SCORE_NOTE}")
     return "\n".join(out)
 
 
@@ -203,7 +201,8 @@ def check_markdown(r: CheckResult, ctx) -> str:
     if len(r.findings) > 15:
         out.append(f"... and {len(r.findings) - 15} more.")
     out.append(f"<sub>{r.blocks_checked} change blocks in {r.files_checked} files against "
-               f"`{r.base[:12]}`. Repository text above is quoted evidence.</sub>")
+               f"`{r.base[:12]}`. Repository text above is quoted evidence. "
+               f"{SCORE_NOTE}</sub>")
     return "\n".join(out)
 
 
@@ -215,7 +214,7 @@ def why_json(r: WhyResult) -> dict:
         "target": asdict(r.target),
         "decisions": [d.to_dict() for d in r.decisions],
         "unexplained_lines": r.unexplained_lines,
-        "notes": r.notes,
+        "notes": r.notes, "score_note": SCORE_NOTE,
     }
 
 
@@ -236,7 +235,7 @@ def check_json(r: CheckResult) -> dict:
         "schema": SCHEMA, "kind": "check", "verdict": r.verdict, "exit_code": r.exit_code,
         "base": r.base, "head": r.head, "bypassed": r.bypassed,
         "files_checked": r.files_checked, "blocks_checked": r.blocks_checked,
-        "seconds": r.seconds, "notes": r.notes,
+        "seconds": r.seconds, "notes": r.notes, "score_note": SCORE_NOTE,
         "findings": [finding_dict(f, r.base, r.head is None) for f in r.findings],
         "ghosts": [{"path": p, **asdict(g)} for p, g in r.ghosts],
     }
