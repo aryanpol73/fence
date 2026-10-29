@@ -41,14 +41,16 @@ What is done, partial, or not done, each with the reason. Kept accurate to the c
 
 ## Partial
 
-- **Risk scoring: no predictive value shown.** The pooled backtest covers 11 repos, 5,674
-  removal blocks and 178 regrets, measured before the scoring fix:
-  - Lift is 1.12x, repo-bootstrap 95% CI [0.47, 1.75]. It is above 1 on only 4 of 11 repos.
+- **Risk scoring: experimental, lift not established.** The pooled backtest covers 11
+  repos, 5,674 removal blocks and 178 regrets. It predates the explanation-scoping fix:
+  - Lift is 1.12x, repo-bootstrap 95% CI [0.47, 1.75]. The interval includes 1, so neither
+    a useful nor a useless score is shown. Lift is above 1 on 4 of 11 repos.
   - Regret rate by band: low 4.2%, medium 2.6%, high 2.2%, critical 3.8%. It does not rise
     with risk.
   - Thresholds and weights were left unchanged: tuning cannot add signal that the score
     lacks.
-  - Scores are explained evidence summaries, not likelihoods.
+  - Scores are explained evidence summaries, not probabilities, and every `check`, JSON
+    and MCP response labels them experimental.
 - **Calibration: withdrawn.** The regret-rate table fitted on cobra + requests did not
   transfer. A table refitted leave-one-repo-out was non-decreasing on only 2 of 10 held-out
   repos. No table ships, so findings carry no outcome probability. The fitting code
@@ -58,7 +60,9 @@ What is done, partial, or not done, each with the reason. Kept accurate to the c
   re-run since. attrs is missing from the pooled set (its clone failed).
 - **Evidence scoping is lexical.** Commit, PR and issue sentences count for code only if
   they name the file, a symbol in the span or a distinctive identifier. Sentences that
-  describe the code in other words are treated as change-level (grade C).
+  describe the code in other words are treated as change-level (grade C). A 14-target
+  audit of this repo found 1 such over-cautious case. 3 more came from reason sentences
+  without a causal marker, which is a reason-detection limit, not a scoping one.
 - **`check` latency** is 0.7-0.9s median and 2.0-2.8s p90 per commit on Windows (500-commit
   backtests). It can go over the 2-3s target on larger diffs, because line-history walks
   run once per decision. Hook mode skips them.

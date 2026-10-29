@@ -4,6 +4,16 @@ All notable changes to Fence. Versions follow semantic versioning.
 
 ## 0.1.0 (unreleased)
 
+### Edge cases and honest scores
+
+- Symbol names match commit prose only with their exact case. A class `Repo` is no longer "named" by the word "repo".
+- `why`, `check` and MCP tools index new commits first (amend, squash, new work). Before this, they explained those commits from the subject line alone and reported "reason unknown".
+- In a shallow clone, the boundary commit's message is not offered as a change-level reason, because it did not add those lines.
+- Binary files are refused with a clear error instead of being explained line by line.
+- MCP `why` and `check` include `reason_scope`, matching JSON.
+- Strength and Change Risk are labelled experimental (`score_note` in JSON and MCP, a note under `check` findings). The dormant "Outcome: …% regretted" line is removed.
+- Parsing old Python with invalid escape sequences no longer prints `SyntaxWarning`s.
+
 ### Explanation quality and pooled evaluation
 
 - `why` scopes commit, PR and issue text to the code it names. Multi-file commits no longer hand one reason sentence to every file. Change-level reasons are labelled `Inferred:` and graded C (`reason_scope`, `change_reason` in JSON). Only name-related tests count as evidence. Span labels name a symbol only if it contains the whole span.

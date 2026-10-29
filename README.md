@@ -262,19 +262,23 @@ the explanation-scoping change. attrs failed to clone (network reset) and is mis
 | critical (≥85) | 3.8% [1.5%, 9.3%] |
 
 What this supports, and what it does not:
-- **Not supported:** that Change Risk predicts which removals get regretted.
-  - The lift interval includes 1, and regret rates do not rise with the risk band.
+- **Lift not established:** the interval includes 1, and the evaluation predates the
+  explanation-scoping fix. The data neither shows that Change Risk predicts regretted
+  removals nor that it cannot.
+  - Regret rates do not rise with the risk band.
   - Lift is above 1 on 4 of 11 repos.
   - The leave-one-repo-out calibration is non-decreasing on only 2 of 10 held-out repos.
   - The regret-rate calibration table was therefore withdrawn. Findings show no outcome
     probability.
 - **Supported:** warnings are rare enough to read. 6.8% of commits are warned; the earlier
   three-repo runs warned on up to 37%.
-- **How to read the scores:** each one is an explained summary of the evidence (grade,
-  type, history shape, code signals), not a calibrated likelihood. Read the evidence, not
-  the number.
-- **Not measured:** the pooled numbers after the scoping change. The change lowers Strength
-  for code from multi-file commits, so verdict counts will shift.
+- **How to read the scores:** they are experimental. Each one is an explained sum of
+  evidence factors (grade, type, history shape, code signals), not a probability. `check`
+  text, JSON (`score_note`) and MCP responses say so. Read the evidence, not the number.
+- **Not measured:** the pooled numbers after the scoping change. A single re-run on the
+  smallest repo (requests, 114 blocks, 4 regretted) moved verdicts from KEEP 10 / VERIFY 8 /
+  CLEAR 96 to KEEP 9 / VERIFY 6 / CLEAR 99, and grades from C 38 / D 72 to C 28 / D 82.
+  Regrets caught are the same (1 of 4). One repo shows no trend.
 
 Per-repo figures are in `evals/results/pooled.md`. Warm `fence why` on requests takes
 about 0.4s, and a 10-file `check` about 2s.
@@ -284,11 +288,17 @@ about 0.4s, and a 10-file `check` about 2s.
 
 ## Known limitations
 
-- Risk scores do not predict regretted removals on the pooled backtest (lift 1.12x, CI
-  [0.47, 1.75]). Treat verdicts as "evidence exists here", not as a probability.
+- Risk scores are experimental. On the pooled backtest, lift is not established (1.12x,
+  CI [0.47, 1.75], which includes 1), and that evaluation predates the explanation fix.
+  Treat verdicts as "evidence exists here", not as a probability.
 - Evidence scoping matches by explicit mention. A sentence that describes the code without
   naming the file, a symbol or a distinctive identifier is treated as change-level (graded
   C). One that names an identifier the code merely uses can still count as specific.
+  Another file's name that is also a common word (`text.py`, `fence.toml`) keeps a
+  sentence containing that word from being used as change-level context.
+- A reason is recognised only by a causal marker ("because", "since", "so that",
+  "so … cannot", …). An explanation in the next sentence, or a plain result clause
+  ("…, so the same state scores the same"), is missed, and the code is graded C or D.
 - The backtest's regret labels (reverted, or the same code re-added in the same file) are a
   noisy, lower-bound proxy for "risky removal".
 - Without `GITHUB_TOKEN`, grade A is unreachable (local-git mode), and `fence doctor` says so.
