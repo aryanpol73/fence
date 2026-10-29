@@ -32,7 +32,7 @@ from fence.signals.catalog import (
     extract_text,
 )
 from fence.signals.code import CODE_SIGNALS, match_code
-from fence.text import clean
+from fence.text import clean, quoted
 
 TEST_PATH = re.compile(
     r"(^|/)(tests?|__tests__|spec|specs)/|_test\.(go|py)$|(^|/)test_[^/]+\.py$|"
@@ -442,7 +442,7 @@ def _record(
     if grade == "D" and change_reason:
         grade = "C"
         inferred = (f"Inferred: added in a change to {scope.source_files} source files whose "
-                    f'message says "{change_reason}" No part of it names this code, so it '
+                    f"message says {quoted(change_reason)} No part of it names this code, so it "
                     "may not be the reason these lines exist.")
     elif grade == "D" and dtype in history_types and dtype not in ("unknown", "cleanup"):
         grade = "C"

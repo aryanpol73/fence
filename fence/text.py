@@ -35,3 +35,9 @@ def clean(text: str, *, max_len: int = 500, keep_newlines: bool = False) -> str:
             out.append(ch)
     result = "".join(out)
     return result if len(result) <= max_len else result[: max_len - 1] + "…"
+
+
+def quoted(text: str) -> str:
+    """Wrap a verbatim quote in delimiters it does not contain, so a quote that starts
+    with "fence" does not print as ""fence" ...". Double quotes unless the text has one."""
+    return f"'{text}'" if '"' in text else f'"{text}"'

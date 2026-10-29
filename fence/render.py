@@ -17,6 +17,7 @@ import typer
 from fence.check.engine import CLEAR, KEEP, SAFE, VERIFY, CheckResult, Finding
 from fence.decisions.build import WhyResult
 from fence.decisions.model import SCHEMA, SCORE_NOTE, DecisionRecord, Evidence, Score
+from fence.text import quoted
 
 _COLORS = {KEEP: "red", VERIFY: "yellow", CLEAR: "green", SAFE: "cyan",
            "critical": "red", "high": "red", "medium": "yellow", "low": "green"}
@@ -56,7 +57,7 @@ def _reason(d: DecisionRecord) -> str:
     if d.stated_reason:
         src = next((e for e in d.evidence if e.id == d.stated_reason_evidence), None)
         where = f"{src.type} {src.ref[:12] if src.type == 'commit' else src.ref}" if src else "?"
-        return f'"{d.stated_reason}" (quoted from {where})'
+        return f"{quoted(d.stated_reason)} (quoted from {where})"
     return d.reason_text
 
 
