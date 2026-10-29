@@ -113,3 +113,11 @@ def test_why_formats_carry_the_same_fields(fx: FixtureRepo) -> None:
     assert "\n\n- Introduced" in md
     bad = runner.invoke(app, ["why", "a.py", "-C", str(fx.root), "--format", "xml"])
     assert bad.exit_code == 1 and "Traceback" not in bad.output
+
+
+def test_quote_that_starts_with_a_quote_is_not_doubled(fx: FixtureRepo) -> None:
+    fx.commit({"a.py": "def f(x):\n    if x is None:\n        raise ValueError(x)\n    return x\n"},
+              'Guard f\n\n"fence" rejects None because a None charge corrupted the ledger.')
+    text = runner.invoke(app, ["why", "a.py", "-C", str(fx.root), "--no-color"]).output
+    assert """Why: '"fence" rejects None because a None charge corrupted the ledger.'""" in text
+    assert '""' not in text

@@ -34,7 +34,11 @@ def test_hook_install_refuses_foreign_hook_and_uninstalls(demo: dict, tmp_path: 
     assert runner.invoke(app, ["hook", "install", "-C", str(repo)]).exit_code == 1
     assert runner.invoke(app, ["hook", "install", "--force", "--pre-push", "-C", str(repo)]
                          ).exit_code == 0
-    assert "fence check --staged --hook" in (hooks / "pre-commit").read_text()
+    script = (hooks / "pre-commit").read_bytes().decode()
+    assert '"$FENCE" check --staged --hook' in script and "\r" not in script
+    # Git's sh may not see a venv's fence on PATH (Windows): the hook records an absolute
+    # path, falls back to PATH, and says so instead of silently checking nothing.
+    assert "FENCE='" in script and "command -v fence" in script and ">&2" in script
     assert runner.invoke(app, ["hook", "uninstall", "--pre-push", "-C", str(repo)]).exit_code == 0
     assert not (hooks / "pre-commit").exists()
 

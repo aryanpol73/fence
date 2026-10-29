@@ -280,9 +280,15 @@ def hook_cmd(
     hooks_dir = Path(ctx.repo.run(["rev-parse", "--git-path", "hooks"]).strip())
     if not hooks_dir.is_absolute():
         hooks_dir = ctx.repo.root / hooks_dir
-    scripts = {"pre-commit": "fence check --staged --hook"}
+    scripts = {"pre-commit": "check --staged --hook"}
     if pre_push:
-        scripts["pre-push"] = 'fence check --hook --pr --base "@{upstream}"'
+        scripts["pre-push"] = 'check --hook --pr --base "@{upstream}"'
+    # Git runs hooks with its own sh and PATH. On Windows a venv's Scripts folder is often
+    # not on it, and a hook that silently found no fence would check nothing. So record
+    # the fence that installed the hook, fall back to PATH, and say so when neither exists.
+    running = Path(sys.argv[0]).stem in ("fence", "codefence")
+    exe = (shutil.which(sys.argv[0]) if running else None) or shutil.which("fence") or ""
+    exe = Path(exe).resolve().as_posix().replace("'", "'\\''") if exe else ""
     for name, cmd in scripts.items():
         target = hooks_dir / name
         existing = target.read_text(encoding="utf-8", errors="replace") if target.exists() else ""
@@ -296,9 +302,15 @@ def hook_cmd(
         if existing and HOOK_MARK not in existing and not force:
             raise _fail(f"{target} exists and is not a fence hook; use --force to replace it")
         hooks_dir.mkdir(parents=True, exist_ok=True)
-        target.write_text(f"#!/bin/sh\n{HOOK_MARK}; `fence hook uninstall` removes it\n"
-                          "command -v fence >/dev/null 2>&1 || exit 0\n"
-                          f"exec {cmd}\n", encoding="utf-8", newline="\n")
+        target.write_text(
+            f"#!/bin/sh\n{HOOK_MARK}; `fence hook uninstall` removes it\n"
+            f"FENCE='{exe}'\n"
+            '[ -n "$FENCE" ] && [ -x "$FENCE" ] || FENCE=$(command -v fence) || {\n'
+            '  echo "fence: not found, so this hook checked nothing;'
+            ' re-run fence hook install" >&2\n'
+            "  exit 0\n"
+            "}\n"
+            f'exec "$FENCE" {cmd}\n', encoding="utf-8", newline="\n")
         target.chmod(0o755)
         typer.echo(f"installed {target}")
 
