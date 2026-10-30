@@ -146,3 +146,37 @@ def test_pagination_follows_link_header(ctx: Context) -> None:
 
     c = Client("https://api.github.com", None, ctx.store, opener=opener)
     assert c.paginate("/items") == [1, 2, 3]
+
+
+BOT_PR = {**PR, "user": {"login": "dependabot[bot]", "id": 2},
+          "body": "Updates the gateway client from 1.0 to 2.0.\n\nRelease notes: retries were "
+                  "removed because they caused duplicate charges upstream."}
+BOT_COMMENTS = [{**COMMENTS[0], "user": {"login": "codecov[bot]"}}]
+
+
+def test_bot_pr_and_bot_comments_are_evidence_not_reasons(ctx: Context) -> None:
+    # Live run on psf/requests: Dependabot PR bodies (pasted upstream release notes) were
+    # quoted as grade-A reasons. A [bot] account's text is shown, never the stated reason.
+    routes = {**ROUTES, "/repos/acme/pay/pulls/7": BOT_PR,
+              "/repos/acme/pay/pulls/7/comments": BOT_COMMENTS}
+    sync(ctx, client=Client("https://api.github.com", "t", ctx.store,
+                            opener=fake_opener(routes, [])))
+    (d,) = why(ctx, "pay.py", 2).decisions
+    assert d.grade != "A" and d.stated_reason is None
+    assert any(e.type == "pr" and e.author == "dependabot[bot]" for e in d.evidence)
+
+
+def test_bot_commit_body_is_not_a_stated_reason(tmp_path: Path,
+                                                monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FENCE_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    fx = FixtureRepo(tmp_path / "r")
+    fx.commit({"ci.yml": "uses: setup-python@v7\n"},
+              "Bump setup-python from 6 to 7\n\nRelease notes: the cache is keyed per OS "
+              "because shared keys caused corrupted restores.",
+              who="dependabot[bot]", email="49699333+dependabot[bot]@users.noreply.github.com")
+    c = Context.open(fx.root)
+    index_repo(c.repo, c.store, c.cfg)
+    (d,) = why(c, "ci.yml").decisions
+    assert d.grade == "D" and d.stated_reason is None
+    assert "text.automated" in {s for s, _ in d.signals} or d.type == "cleanup"

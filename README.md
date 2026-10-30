@@ -340,10 +340,24 @@ about 0.4s, and a 10-file `check` about 2s.
 - The backtest's regret labels (reverted, or the same code re-added in the same file) are a
   noisy, lower-bound proxy for "risky removal".
 - Without `GITHUB_TOKEN`, grade A is unreachable (local-git mode), and `fence doctor` says so.
-  Grade A is tested against recorded GitHub responses. The live test
-  (`FENCE_LIVE_GITHUB=1 GITHUB_TOKEN=… uv run pytest tests/test_github_live.py`) exists but
-  has not yet been run, so live GitHub behaviour is unverified.
+  Live GitHub sync works: one run of the opt-in test
+  (`FENCE_LIVE_GITHUB=1 GITHUB_TOKEN=… uv run pytest tests/test_github_live.py`) on
+  psf/requests (2026-10-30, Windows) fetched 40 PRs, 74 linked issues and 29 review comments
+  through 194 API requests. It produced grade-A decisions quoting PR, issue and review text
+  verbatim, with links.
+- Grade A means the reason was quoted from PR or issue text, not that the quote is correct.
+  In that run, 19 of 1,364 decisions in the test's sample of 24 files reached grade A. A hand
+  check found about 7 of the 19 were not real reasons for the code: 6 quoted upstream
+  release notes from Dependabot PR bodies, and 1 was a review comment ("…but otherwise this
+  looks good."). Since then, text written by `[bot]` accounts (commit bodies, PR bodies,
+  review comments) is kept as evidence but never quoted as a stated reason, and "but/and
+  otherwise" no longer counts as causal. Those rules are covered by tests on recorded
+  responses but have not been re-measured on live data.
 - Rebase-merged PRs map to their PR only through the GitHub API.
+- Blob-less partial clones (`git clone --filter=blob:none`) index very slowly. Indexing
+  needs every changed file's contents, so git downloads them from the remote one commit at
+  a time, and a network drop fails the run (`git log failed (128): fatal: could not fetch
+  … from promisor remote`). Use a full clone or `--filter=blob:limit=1m`.
 - Symbol anchors cover Python, JS/TS, Go and Java. Other languages get file and line anchors,
   with a notice.
 - Windows, macOS and Linux are supported. Symlink tests are skipped on Windows without
