@@ -2,9 +2,31 @@
 
 All notable changes to Fence. Versions follow semantic versioning.
 
-## Unreleased
+## 0.1.1 (2026-10-30)
 
-- Docs updated after the 0.1.0 release: PyPI install lines, the pre-commit `rev`, and the corrected note that a PyPI pending publisher does not reserve the name.
+Bug fixes for GitHub syncing, for resuming an interrupted index, and for false grade-A reasons. No new features. Scoring weights and thresholds are unchanged.
+
+### GitHub sync
+
+- A transient network failure (timeout, reset, failed connect) is retried twice, after 2s and then 5s, instead of ending the whole sync. HTTP errors, rate limits and 304 responses are not retried.
+- `fence index` prints sync progress (`GitHub: N/M PRs fetched...`). Before, it looked stuck at the last commit count for minutes. A stopped sync says how many PRs are left and that a re-run resumes.
+- A PR is stored only after its linked issues are fetched. Before, a stop part-way through a PR stored it early, so re-runs skipped it and its issues were never fetched.
+- References in bot-authored PR descriptions no longer trigger issue lookups. On pallets/itsdangerous, 666 of 728 such lookups found nothing (upstream issue numbers from pasted release notes), and 62 matched unrelated local issues.
+
+### Reasons
+
+- Text written by GitHub `[bot]` accounts (commit bodies, PR descriptions, review comments) is kept as evidence but never quoted as a stated reason. A bot commit's subject still marks the change as automated. On psf/requests, grade A fell from 19 to 13 in the live test's sample, and all 7 hand-flagged false quotes were gone.
+- "but otherwise" and "and otherwise" no longer count as causal ("…but otherwise this looks good").
+
+### Errors and tests
+
+- git errors show git's own `fatal:`/`error:` lines instead of the first 500 characters of stderr, which can be minutes of "Auto packing" noise.
+- The opt-in live GitHub test clones with `--filter=blob:limit=1m`. A blob-less clone made indexing fetch file contents one commit at a time and fail on a network drop. It passed live twice on psf/requests.
+- Regression tests cover bot text, "but otherwise", git error reporting, retries, sync progress, resuming a stopped PR without duplicate rows, and bot issue lookups.
+
+### Docs
+
+- README installs from PyPI, and the pre-commit example pins `rev: v0.1.1`. RELEASING.md says correctly that a PyPI pending publisher does not reserve the name. README notes that blob-less partial clones index slowly.
 
 ## 0.1.0 (2026-10-29)
 

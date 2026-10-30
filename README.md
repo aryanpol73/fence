@@ -226,7 +226,7 @@ errors. With the [pre-commit](https://pre-commit.com) framework instead:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/aryanpol73/fence
-    rev: v0.1.0
+    rev: v0.1.1
     hooks:
       - id: fence-check
 ```
