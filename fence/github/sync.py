@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from fence.context import Context
 from fence.github.client import Client, GithubError, RateLimited
 from fence.signals.catalog import extract_text
+from fence.text import is_bot
 
 
 @dataclass
@@ -82,7 +83,10 @@ def _sync_pr(ctx: Context, client: Client, base: str, n: int, rep: SyncReport) -
                 reviewers.add(rv["user"].get("login", ""))
                 if rv.get("body"):
                     comments.append({**rv, "path": None, "line": None})
-    if ctx.cfg.github.sync_issues:
+    # A bot's PR body cites upstream projects' issues ("tox #1585"). Looked up here they
+    # 404, or worse, match an unrelated local issue: on pallets/itsdangerous 666 of 728
+    # such lookups found nothing and 62 hit unrelated issues. Human PRs' all resolved.
+    if ctx.cfg.github.sync_issues and not is_bot((d.get("user") or {}).get("login")):
         refs = {d for s, d in extract_text(d.get("body") or "")
                 if s in ("text.closes_issue", "text.issue_ref") and d.startswith("#")}
         for ref in sorted(refs)[:10]:

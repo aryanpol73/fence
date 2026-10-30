@@ -240,3 +240,13 @@ def test_resume_after_a_stop_mid_pr_refetches_it_without_duplicates(ctx: Context
                                    opener=fake_opener(ROUTES, []))).prs == 0
     assert q("SELECT COUNT(*) FROM review_comments").fetchone()[0] == len(COMMENTS)
 
+
+def test_bot_pr_bodies_trigger_no_issue_lookups(ctx: Context) -> None:
+    # Dependabot bodies cite upstream issues ("tox #1585"); looking them up in this repo
+    # wasted hundreds of requests on pallets/itsdangerous and could link unrelated issues.
+    log: list = []
+    pr = {**BOT_PR, "body": "Bumps tox. Release notes: fixed #3 and tox-dev/tox#1585."}
+    sync(ctx, client=Client("https://api.github.com", "t", ctx.store,
+                            opener=fake_opener({**ROUTES, "/repos/acme/pay/pulls/7": pr}, log)))
+    assert not [u for u, _ in log if "/issues/" in u]
+    assert ctx.store.conn.execute("SELECT COUNT(*) FROM issues").fetchone()[0] == 0
