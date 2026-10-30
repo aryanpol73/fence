@@ -214,11 +214,21 @@ def _stream(args: Sequence[str], *, cwd: Path, timeout: float, chunk_size: int) 
         if timed_out.is_set():
             raise GitTimeout(f"git {args[0] if args else ''} timed out after {timeout}s")
         if returncode != 0:
-            err.seek(0)
-            stderr = err.read(MAX_STDERR_CHARS * 4).decode("utf-8", "replace").strip()
-            raise GitError(
-                f"git {args[0] if args else ''} failed ({returncode}): {stderr[:MAX_STDERR_CHARS]}"
-            )
+            # The end of stderr, where git puts its fatal line. A long run can print
+            # minutes of progress chatter ("Auto packing ...") first.
+            size = err.seek(0, os.SEEK_END)
+            err.seek(max(0, size - MAX_STDERR_CHARS * 16))
+            stderr = _stderr_summary(err.read().decode("utf-8", "replace"))
+            raise GitError(f"git {args[0] if args else ''} failed ({returncode}): {stderr}")
+
+
+def _stderr_summary(stderr: str) -> str:
+    """git's own error lines (fatal:/error:), else the end of stderr, capped. The start
+    of stderr is often progress or housekeeping noise that hides the actual failure."""
+    lines = [ln.strip() for ln in stderr.splitlines() if ln.strip()]
+    errors = [ln for ln in lines if ln.startswith(("fatal:", "error:"))]
+    text = "\n".join(errors or lines)
+    return text if len(text) <= MAX_STDERR_CHARS else "..." + text[-MAX_STDERR_CHARS:]
 
 
 def _run_bytes(
@@ -237,7 +247,7 @@ def _run_bytes(
     except FileNotFoundError:
         raise GitError("git executable not found") from None
     if proc.returncode != 0:
-        stderr = proc.stderr.decode("utf-8", "replace").strip()[:MAX_STDERR_CHARS]
+        stderr = _stderr_summary(proc.stderr.decode("utf-8", "replace"))
         raise GitError(f"git {args[0] if args else ''} failed ({proc.returncode}): {stderr}")
     return proc.stdout
 

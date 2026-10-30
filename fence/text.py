@@ -41,3 +41,10 @@ def quoted(text: str) -> str:
     """Wrap a verbatim quote in delimiters it does not contain, so a quote that starts
     with "fence" does not print as ""fence" ...". Double quotes unless the text has one."""
     return f"'{text}'" if '"' in text else f'"{text}"'
+
+
+def is_bot(name: str | None) -> bool:
+    """GitHub app accounts (dependabot[bot], renovate[bot], github-actions[bot]) carry a
+    "[bot]" suffix that human logins cannot have. Their text is generated, often pasted
+    from upstream release notes, so it never speaks for this repository."""
+    return bool(name) and name.strip().lower().endswith("[bot]")

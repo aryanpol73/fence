@@ -15,7 +15,10 @@ from fence.text import clean
 MAX_QUOTE = 300
 
 _REASON = re.compile(
-    r"\b(because|since|so that|otherwise|or else|to (prevent|avoid|stop|ensure|guard|protect)|"
+    # "otherwise" is causal ("otherwise the cache corrupts"), but "but/and otherwise"
+    # means "apart from that" ("but otherwise this looks good").
+    r"\b(because|since|so that|(?<!but )(?<!and )otherwise|or else|"
+    r"to (prevent|avoid|stop|ensure|guard|protect)|"
     r"prevents?|prevented|caus(e|es|ed|ing)|produc(es|ed|ing)|led to|leads to|"
     r"result(s|ed)? in|in order to|due to|required (by|for)|needed (by|for)|"
     r"without (this|it)|was (failing|crashing|breaking|timing out)|broke|breaks|"

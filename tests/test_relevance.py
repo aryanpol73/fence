@@ -207,3 +207,10 @@ def test_known_limit_other_files_common_word_stem_blocks_change_context(
     index_repo(ctx.repo, ctx.store, ctx.cfg)
     (d,) = why(ctx, "a.py").decisions
     assert d.grade == "D" and d.change_reason is None
+
+
+def test_but_otherwise_is_not_causal() -> None:
+    # Live run: "One minor tweak for readability, but otherwise this looks good." was
+    # quoted as a grade-A review reason.
+    assert stated_reason("One minor tweak for readability, but otherwise this looks good.") is None
+    assert stated_reason("Keep the lock, otherwise two writers corrupt the file.")

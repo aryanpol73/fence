@@ -32,7 +32,7 @@ from fence.signals.catalog import (
     extract_text,
 )
 from fence.signals.code import CODE_SIGNALS, match_code
-from fence.text import clean, quoted
+from fence.text import clean, is_bot, quoted
 
 TEST_PATH = re.compile(
     r"(^|/)(tests?|__tests__|spec|specs)/|_test\.(go|py)$|(^|/)test_[^/]+\.py$|"
@@ -276,9 +276,14 @@ def _record(
     signals = (ctx.store.signals_for(sha) if row
                else extract_text(message))
     sig_ids = {s for s, _ in signals}  # whole change: evidence links shown to the reader
-    rel_message = relevance.relevant_text(message, scope)
+    # A bot's commit body is generated (often upstream release notes), so only its subject
+    # ("Bump x from 1 to 2") speaks for this repo. It stays quoted as evidence above.
+    bot_commit = is_bot(first.author)
+    reason_source = (row.subject if row else first.summary) if bot_commit else message
+    rel_message = relevance.relevant_text(reason_source, scope)
     # Signals from text that is about this code; they decide type, grade C and strength.
-    rel_signals = signals if scope.focused else extract_text(rel_message)
+    rel_signals = (extract_text(reason_source) if bot_commit else signals) if scope.focused \
+        else extract_text(rel_message)
     rel_ids = {s for s, _ in rel_signals}
 
     stated: str | None = None
@@ -294,13 +299,15 @@ def _record(
     if pr is not None:
         prow = ctx.store.conn.execute("SELECT * FROM prs WHERE number = ?", (pr,)).fetchone()
         if prow and prow["state"] != "unreachable":
-            body = f"{prow['title'] or ''}\n\n{prow['body'] or ''}"
+            # As for bot commits: a bot's PR body is never this repo's stated reason.
+            pr_body = "" if is_bot(prow["author"]) else (prow["body"] or "")
+            body = f"{prow['title'] or ''}\n\n{pr_body}"
             pe = add(type="pr", ref=f"#{pr}", url=prow["url"] or ctx.pr_url(pr), timestamp=None,
                      author=prow["author"], quote=clean(prow["title"] or "", max_len=200))
             pr_sigs = extract_text(body, skip_refs=frozenset({f"#{pr}"}))
             sig_ids |= {s for s, _ in pr_sigs}
             signals = [*signals, *(x for x in pr_sigs if x[0] in LINK_SIGNALS and x not in signals)]
-            rel_body = relevance.relevant_text(prow["body"] or "", scope)
+            rel_body = relevance.relevant_text(pr_body, scope)
             rel_pr = extract_text(relevance.relevant_text(body, scope),
                                   skip_refs=frozenset({f"#{pr}"}))
             rel_signals = [*rel_signals, *(x for x in rel_pr if x not in rel_signals)]
@@ -319,6 +326,8 @@ def _record(
                 # A line comment on this file is about this code; a review summary is
                 # PR-level text and gets the same scoping as the PR body.
                 on_file = rc["path"] in (filename, target.path)
+                if is_bot(rc["author"]):  # coverage, lint and AI review bots
+                    continue
                 text = (rc["body"] or "") if on_file else relevance.relevant_text(
                     rc["body"] or "", scope)
                 q = reasons.stated_reason(text)
@@ -369,7 +378,7 @@ def _record(
     # these lines, so its message is no evidence for them.
     cutoff = ctx.shallow and first.boundary
     change_reason = None if scope.focused or cutoff else reasons.stated_reason(
-        relevance.change_level_text(message, scope))
+        relevance.change_level_text(reason_source, scope))
     constraints += reasons.constraints(rel_message)
     alternatives += reasons.alternatives(rel_message)
 

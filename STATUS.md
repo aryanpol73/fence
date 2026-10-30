@@ -47,12 +47,12 @@ in the normal suite exercises it, or it was run by hand and the output checked.
 | Item | Status |
 |---|---|
 | 1. Core `why`/`check`, text/markdown/JSON, CLI/MCP parity | Implemented + verified. `why --format markdown` added; parity tests in `tests/test_edge_cases.py` |
-| 2. Local git mandatory; GitHub optional, offline mode, caching, rate limits | Implemented + verified against recorded responses. **Live GitHub unverified**: `tests/test_github_live.py` exists, opt-in, not yet run |
+| 2. Local git mandatory; GitHub optional, offline mode, caching, rate limits | Implemented + verified against recorded responses. Live sync verified once (`tests/test_github_live.py`, psf/requests, 2026-10-30): 40 PRs, 74 issues, 29 review comments, 194 API requests, no rate-limit stop. Rate-limit and ETag behaviour live, and repos other than requests, not exercised |
 | 3. Python + JS/TS/Go/Java via `LanguagePlugin`, text fallback | Implemented + verified (`tests/test_lang.py`; `why README.md` works) |
 | 4. MCP stdio, git hooks, pre-commit framework hook, GitHub Action, `fence.toml` | Implemented + verified, except the Action and the pre-commit framework hook, which were not run in a real PR or `pre-commit` install |
 | 5. Reasons without causal words | Implemented + verified: result clause, hazard, consequence sentence; +106/1,053 on 33k messages, 50 hand-checked |
 | 6. Common-word names | Partly fixed: a bare stem no longer extends to later sentences. Remaining limit pinned by `test_known_limit_other_files_common_word_stem_blocks_change_context` |
-| 7. Grade A live validation | Test added, skipped by default. Not run (no token in this session) |
+| 7. Grade A live validation | Passed once (122s): grade A reached from live PR, issue and review text, quoted verbatim with URLs. This proves the pipeline, not quote quality. A hand check of the run's 19 grade-A decisions found about 7 were not reasons for the code: 6 Dependabot release-note quotes, and 1 "…otherwise this looks good" review comment. Fixed since: `[bot]`-authored commit bodies, PR bodies and review comments are never stated reasons, and "but/and otherwise" is not causal. Second live run (110s), same sample: grade A 19 -> 13, with no A/B quote from bot text and all 7 flagged quotes gone |
 | 8. Eval results in repo | Done: `evals/results/requests-before-after/` with reproduce commands |
 | 9. Packaging and docs | Implemented. Distribution `gitfence` (commands `fence` and `gitfence`). Clean-venv `pip install` of the wheel verified on Windows; CI's package job passed on Windows, macOS and Linux at 3e01144. Released: gitfence 0.1.0 on PyPI via Trusted Publishing (tag v0.1.0 = a6db4e4), and a fresh `pip install gitfence==0.1.0` runs `fence` and `gitfence`. CI's macOS package job on a6db4e4 was cancelled in the queue, not failed, and has not been re-run |
 

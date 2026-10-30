@@ -146,3 +146,107 @@ def test_pagination_follows_link_header(ctx: Context) -> None:
 
     c = Client("https://api.github.com", None, ctx.store, opener=opener)
     assert c.paginate("/items") == [1, 2, 3]
+
+
+BOT_PR = {**PR, "user": {"login": "dependabot[bot]", "id": 2},
+          "body": "Updates the gateway client from 1.0 to 2.0.\n\nRelease notes: retries were "
+                  "removed because they caused duplicate charges upstream."}
+BOT_COMMENTS = [{**COMMENTS[0], "user": {"login": "codecov[bot]"}}]
+
+
+def test_bot_pr_and_bot_comments_are_evidence_not_reasons(ctx: Context) -> None:
+    # Live run on psf/requests: Dependabot PR bodies (pasted upstream release notes) were
+    # quoted as grade-A reasons. A [bot] account's text is shown, never the stated reason.
+    routes = {**ROUTES, "/repos/acme/pay/pulls/7": BOT_PR,
+              "/repos/acme/pay/pulls/7/comments": BOT_COMMENTS}
+    sync(ctx, client=Client("https://api.github.com", "t", ctx.store,
+                            opener=fake_opener(routes, [])))
+    (d,) = why(ctx, "pay.py", 2).decisions
+    assert d.grade != "A" and d.stated_reason is None
+    assert any(e.type == "pr" and e.author == "dependabot[bot]" for e in d.evidence)
+
+
+def test_bot_commit_body_is_not_a_stated_reason(tmp_path: Path,
+                                                monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("FENCE_CACHE_DIR", str(tmp_path / "cache"))
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    fx = FixtureRepo(tmp_path / "r")
+    fx.commit({"ci.yml": "uses: setup-python@v7\n"},
+              "Bump setup-python from 6 to 7\n\nRelease notes: the cache is keyed per OS "
+              "because shared keys caused corrupted restores.",
+              who="dependabot[bot]", email="49699333+dependabot[bot]@users.noreply.github.com")
+    c = Context.open(fx.root)
+    index_repo(c.repo, c.store, c.cfg)
+    (d,) = why(c, "ci.yml").decisions
+    assert d.grade == "D" and d.stated_reason is None
+    assert "text.automated" in {s for s, _ in d.signals} or d.type == "cleanup"
+
+
+def _flaky(routes: dict, failures: int):
+    """An opener whose first `failures` calls drop the connection, like a flaky network."""
+    real, calls = fake_opener(routes, []), {"n": 0}
+
+    def opener(req, timeout=None):
+        calls["n"] += 1
+        if calls["n"] <= failures:
+            raise urllib.error.URLError(ConnectionResetError("connection reset"))
+        return real(req, timeout)
+    return opener
+
+
+def test_sync_survives_a_dropped_connection_and_reports_progress(ctx: Context) -> None:
+    # External runs stopped the whole sync on one transient network error (95 of 220
+    # PRs left unfetched on pallets/itsdangerous). One drop is now retried.
+    seen: list[tuple[int, int]] = []
+    client = Client("https://api.github.com", "t", ctx.store, opener=_flaky(ROUTES, 1),
+                    retry_delays=(0, 0))
+    rep = sync(ctx, client=client, progress=lambda done, total: seen.append((done, total)))
+    assert rep.stopped is None and rep.prs == 1
+    assert seen == [(1, 1)]
+
+
+def test_sync_stops_with_a_resume_hint_when_the_network_stays_down(ctx: Context) -> None:
+    client = Client("https://api.github.com", "ghp_secret123", ctx.store,
+                    opener=_flaky(ROUTES, 99), retry_delays=(0, 0))
+    rep = sync(ctx, client=client)
+    assert rep.prs == 0 and rep.stopped
+    assert "unreachable" in rep.stopped and "1 PRs left; re-run to resume" in rep.stopped
+    assert "ghp_secret123" not in rep.stopped
+
+
+def test_resume_after_a_stop_mid_pr_refetches_it_without_duplicates(ctx: Context) -> None:
+    # On expressjs/body-parser the run stopped while fetching PR #719's issues. The PR row
+    # was already stored, so a re-run skipped it and its issues were never fetched.
+    def down_on_issues(req, timeout=None):
+        if "/issues/" in req.full_url:
+            raise urllib.error.URLError(TimeoutError("timed out"))
+        return fake_opener(ROUTES, [])(req, timeout)
+
+    first = sync(ctx, client=Client("https://api.github.com", "t", ctx.store,
+                                    opener=down_on_issues, retry_delays=()))
+    assert first.stopped and first.prs == 0
+    assert ctx.store.conn.execute("SELECT COUNT(*) FROM prs").fetchone()[0] == 0
+
+    again = sync(ctx, client=Client("https://api.github.com", "t", ctx.store,
+                                    opener=fake_opener(ROUTES, []), retry_delays=()))
+    assert again.stopped is None and (again.prs, again.issues) == (1, 1)
+    q = ctx.store.conn.execute
+    assert q("SELECT COUNT(*) FROM prs").fetchone()[0] == 1
+    assert q("SELECT COUNT(*) FROM issues").fetchone()[0] == 1
+    assert q("SELECT COUNT(*) FROM review_comments").fetchone()[0] == len(COMMENTS)
+    assert q("SELECT COUNT(*) FROM pr_issue_links").fetchone()[0] == 1
+    # A third run has nothing left to fetch and changes nothing.
+    assert sync(ctx, client=Client("https://api.github.com", "t", ctx.store,
+                                   opener=fake_opener(ROUTES, []))).prs == 0
+    assert q("SELECT COUNT(*) FROM review_comments").fetchone()[0] == len(COMMENTS)
+
+
+def test_bot_pr_bodies_trigger_no_issue_lookups(ctx: Context) -> None:
+    # Dependabot bodies cite upstream issues ("tox #1585"); looking them up in this repo
+    # wasted hundreds of requests on pallets/itsdangerous and could link unrelated issues.
+    log: list = []
+    pr = {**BOT_PR, "body": "Bumps tox. Release notes: fixed #3 and tox-dev/tox#1585."}
+    sync(ctx, client=Client("https://api.github.com", "t", ctx.store,
+                            opener=fake_opener({**ROUTES, "/repos/acme/pay/pulls/7": pr}, log)))
+    assert not [u for u, _ in log if "/issues/" in u]
+    assert ctx.store.conn.execute("SELECT COUNT(*) FROM issues").fetchone()[0] == 0
