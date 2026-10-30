@@ -1,4 +1,4 @@
-name: Fence check
+name: gitfence
 description: Warn when a pull request removes or weakens code that exists for a reason.
 branding:
   icon: shield
