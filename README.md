@@ -351,8 +351,9 @@ about 0.4s, and a 10-file `check` about 2s.
   release notes from Dependabot PR bodies, and 1 was a review comment ("…but otherwise this
   looks good."). Since then, text written by `[bot]` accounts (commit bodies, PR bodies,
   review comments) is kept as evidence but never quoted as a stated reason, and "but/and
-  otherwise" no longer counts as causal. Those rules are covered by tests on recorded
-  responses but have not been re-measured on live data.
+  otherwise" no longer counts as causal. On a second live run (same repo and sample), grade
+  A fell from 19 to 13. None of the 13 comes from bot text, and all 7 hand-flagged quotes are
+  gone. The remaining 13 are not all hand-verified as correct reasons.
 - Rebase-merged PRs map to their PR only through the GitHub API.
 - Blob-less partial clones (`git clone --filter=blob:none`) index very slowly. Indexing
   needs every changed file's contents, so git downloads them from the remote one commit at
