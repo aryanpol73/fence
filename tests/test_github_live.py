@@ -4,7 +4,7 @@ normal suite, which needs no network.
     FENCE_LIVE_GITHUB=1 GITHUB_TOKEN=<read-only token> uv run pytest tests/test_github_live.py
 
 It clones a public repository (psf/requests by default, override with
-FENCE_LIVE_REPO=owner/name) without blobs, syncs at most 40 merged PRs, then looks for
+FENCE_LIVE_REPO=owner/name) without blobs over 1 MB, syncs at most 40 merged PRs, then looks for
 one decision whose stated reason is quoted from PR or issue text. About 100 API
 requests. Until this test has actually run and passed, live GitHub behaviour is
 covered only by the recorded-response tests in tests/test_github.py.
@@ -31,7 +31,11 @@ def test_live_sync_reaches_grade_a(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     monkeypatch.setenv("FENCE_CACHE_DIR", str(tmp_path / "cache"))
     slug = os.environ.get("FENCE_LIVE_REPO", "psf/requests")
     clone = tmp_path / "repo"
-    subprocess.run(["git", "clone", "-q", "--filter=blob:none",
+    # Blobs over 1 MB are left out, as in evals/run_suite.py. Not blob:none: indexing runs
+    # `git log --numstat`, which needs every changed blob, so a blob-less clone fetches
+    # them one commit at a time during indexing (about 50 minutes for requests, and any
+    # network drop fails it with git exit 128).
+    subprocess.run(["git", "clone", "-q", "--filter=blob:limit=1m",
                     f"https://github.com/{slug}.git", str(clone)], check=True, timeout=600)
     ctx = Context.open(clone)
     index_repo(ctx.repo, ctx.store, ctx.cfg)

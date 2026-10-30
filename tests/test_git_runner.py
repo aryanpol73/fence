@@ -109,3 +109,20 @@ def test_calls_git_with_list_and_no_shell(tmp_repo: Path, monkeypatch: pytest.Mo
 def test_git_failure_is_git_error(tmp_repo: Path) -> None:
     with pytest.raises(GitError, match="failed"):
         Repo.open(tmp_repo).run(["show", "HEAD:missing.py"])
+
+
+def test_error_keeps_gits_fatal_line_not_leading_noise() -> None:
+    # Shape of the live-test failure: minutes of auto-gc chatter, then the real error.
+    # Keeping the first 500 characters showed only "Auto packing ...".
+    noise = ("Auto packing the repository for optimum performance.\n"
+             'See "git help gc" for manual housekeeping.\n') * 40
+    stderr = noise + "fatal: could not fetch 1234abcd from promisor remote\n"
+    assert runner._stderr_summary(stderr) == (
+        "fatal: could not fetch 1234abcd from promisor remote")
+    tail = runner._stderr_summary("progress\n" * 200 + "last words")
+    assert tail.endswith("last words") and len(tail) <= runner.MAX_STDERR_CHARS + 3
+
+
+def test_streamed_failure_reports_the_fatal_line(tmp_repo: Path) -> None:
+    with pytest.raises(GitError, match=r"failed \(128\): fatal: .*no-such-rev"):
+        list(Repo.open(tmp_repo).stream(["log", "no-such-rev", "--"]))
