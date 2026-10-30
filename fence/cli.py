@@ -126,7 +126,15 @@ def index(
     if ctx.github_token and ctx.slug:
         from fence.github.sync import sync
 
-        gh = sync(ctx)
+        def gh_progress(done: int, total: int) -> None:
+            # The sync is one request at a time and can take minutes; without this the
+            # output looks stuck at the last commit count.
+            if not quiet and not json_out and (done == 1 or done % 10 == 0 or done == total):
+                typer.echo(f"  GitHub: {done}/{total} PRs fetched...", err=True)
+
+        if not quiet and not json_out:
+            typer.echo("  GitHub: fetching PRs, issues and review comments...", err=True)
+        gh = sync(ctx, progress=gh_progress)
     if json_out:
         typer.echo(dumps({"schema": "fence/v1", "kind": "index", **rep.__dict__,
                           "github": gh.__dict__ if gh else None}))

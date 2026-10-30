@@ -27,6 +27,10 @@ class RateLimited(GithubError):
     pass
 
 
+class Unreachable(GithubError):
+    """A network failure (DNS, connect, reset, timeout), not an HTTP answer."""
+
+
 @dataclass
 class Response:
     status: int
@@ -37,7 +41,7 @@ class Response:
 class Client:
     def __init__(self, base_url: str, token: str | None, store: Store, *, min_remaining: int = 50,
                  policy: str = "stop", max_requests: int = 2000, timeout: float = 20.0,
-                 opener=None) -> None:
+                 opener=None, retry_delays: tuple[float, ...] = (2.0, 5.0)) -> None:
         self.base = base_url.rstrip("/")
         self.token = token
         self.store = store
@@ -48,6 +52,9 @@ class Client:
         self.requests = 0
         self.remaining: int | None = None
         self._open = opener or urllib.request.urlopen
+        # A sync makes hundreds of sequential requests; one dropped connection should not
+        # end it. HTTP errors are answers, so only network failures are retried.
+        self.retry_delays = retry_delays
 
     def _redact(self, text: str) -> str:
         return text.replace(self.token, "***") if self.token else text
@@ -69,6 +76,14 @@ class Client:
             **({"If-None-Match": cached["etag"]} if cached and cached["etag"] else {}),
         })
         self.requests += 1
+        for delay in self.retry_delays:
+            try:
+                return self._send(req, url, cached)
+            except Unreachable:
+                time.sleep(delay)
+        return self._send(req, url, cached)
+
+    def _send(self, req: urllib.request.Request, url: str, cached) -> Response:
         try:
             with self._open(req, timeout=self.timeout) as resp:  # noqa: S310 - https only
                 self._note_limits(resp.headers)
@@ -96,7 +111,7 @@ class Client:
                 raise RateLimited("GitHub rate limit reached; re-run later to resume") from None
             return Response(e.code, None, None)
         except (urllib.error.URLError, TimeoutError, OSError) as e:
-            raise GithubError(self._redact(f"GitHub unreachable: {e}")) from None
+            raise Unreachable(self._redact(f"GitHub unreachable: {e}")) from None
         except ValueError:
             raise GithubError(f"invalid JSON from {url}") from None
 

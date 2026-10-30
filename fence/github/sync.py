@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from fence.context import Context
@@ -27,7 +28,8 @@ class SyncReport:
     notes: list[str] = field(default_factory=list)
 
 
-def sync(ctx: Context, *, client: Client | None = None, max_prs: int = 500) -> SyncReport:
+def sync(ctx: Context, *, client: Client | None = None, max_prs: int = 500,
+         progress: Callable[[int, int], None] | None = None) -> SyncReport:
     rep = SyncReport()
     cfg = ctx.cfg.github
     if cfg.enabled == "off" or not ctx.slug:
@@ -45,12 +47,16 @@ def sync(ctx: Context, *, client: Client | None = None, max_prs: int = 500) -> S
         "AND c.committer_time >= ? ORDER BY c.committer_time DESC LIMIT ?",
         (min_time, max_prs))]
     try:
-        for n in todo if cfg.sync_prs else []:
+        for i, n in enumerate(todo if cfg.sync_prs else [], 1):
             _sync_pr(ctx, client, base, n, rep)
+            if progress:
+                progress(i, len(todo))
     except RateLimited as e:
         rep.stopped = str(e)
     except GithubError as e:
         rep.stopped = str(e)
+    if rep.stopped:
+        rep.stopped += f" ({len(todo) - rep.prs - rep.unreachable} PRs left; re-run to resume)"
     rep.requests = client.requests
     return rep
 
@@ -76,6 +82,13 @@ def _sync_pr(ctx: Context, client: Client, base: str, n: int, rep: SyncReport) -
                 reviewers.add(rv["user"].get("login", ""))
                 if rv.get("body"):
                     comments.append({**rv, "path": None, "line": None})
+    if ctx.cfg.github.sync_issues:
+        refs = {d for s, d in extract_text(d.get("body") or "")
+                if s in ("text.closes_issue", "text.issue_ref") and d.startswith("#")}
+        for ref in sorted(refs)[:10]:
+            _sync_issue(ctx, client, base, int(ref[1:]), n, rep)
+    # The PR row is written last: a stored PR means it and its issues are complete, so a
+    # run stopped part-way through a PR fetches that PR again next time.
     with ctx.store.transaction():
         ctx.store.conn.execute(
             "INSERT OR REPLACE INTO prs VALUES(?,?,?,?,?,?,?,?,?,?,?)",
@@ -93,11 +106,6 @@ def _sync_pr(ctx: Context, client: Client, base: str, n: int, rep: SyncReport) -
                  c.get("created_at") or c.get("submitted_at")))
     rep.prs += 1
     rep.review_comments += len(comments)
-    if ctx.cfg.github.sync_issues:
-        refs = {d for s, d in extract_text(d.get("body") or "")
-                if s in ("text.closes_issue", "text.issue_ref") and d.startswith("#")}
-        for ref in sorted(refs)[:10]:
-            _sync_issue(ctx, client, base, int(ref[1:]), n, rep)
 
 
 def _sync_issue(ctx: Context, client: Client, base: str, n: int, pr: int,
